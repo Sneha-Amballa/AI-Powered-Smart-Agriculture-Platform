@@ -14,6 +14,11 @@ env/
 .env.*
 !.env.example
 
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
+
 # Python Caches & Testing
 .pytest_cache/
 .mypy_cache/
@@ -29,12 +34,18 @@ htmlcov/
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+app/build/
+app/.dart_tool/
+app/.packages
+app/.pub-cache/
+app/.pub/
 
 # IDE and Editor Files
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
 
 # OS Generated Files
 .DS_Store
