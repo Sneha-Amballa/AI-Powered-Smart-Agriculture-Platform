@@ -63,6 +63,7 @@ class AuthNotifier extends Notifier<AuthState> {
     required String fullName,
     required String phoneNumber,
     required String password,
+    String preferredLanguage = 'en',
   }) async {
     _updateState(state.copyWith(isLoading: true, clearError: true));
     try {
@@ -70,6 +71,7 @@ class AuthNotifier extends Notifier<AuthState> {
         fullName: fullName,
         phoneNumber: phoneNumber,
         password: password,
+        preferredLanguage: preferredLanguage,
       );
 
       _updateState(AuthState(
@@ -178,9 +180,15 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Logout farmer user, wipe local credentials, and redirect.
+  /// Logout farmer user and end active session without deleting saved account or farm data.
   Future<void> logout() async {
     await _repository.logout();
+    _updateState(AuthState.unauthenticated());
+  }
+
+  /// Permanently delete farmer user account and all saved farm profile data.
+  Future<void> deleteAccount() async {
+    await _repository.deleteAccount();
     _updateState(AuthState.unauthenticated());
   }
 
@@ -188,6 +196,18 @@ class AuthNotifier extends Notifier<AuthState> {
   void clearError() {
     if (state.errorMessage != null) {
       _updateState(state.copyWith(clearError: true));
+    }
+  }
+
+  /// Update farmer preferred language preference and active state.
+  Future<void> updateLanguage(String languageCode) async {
+    final updatedUser = await _repository.updateLanguage(languageCode);
+    if (updatedUser != null) {
+      final currentProfile = state.profile;
+      _updateState(state.copyWith(
+        user: updatedUser,
+        profile: currentProfile?.copyWith(preferredLanguage: languageCode),
+      ));
     }
   }
 }

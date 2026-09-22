@@ -72,6 +72,8 @@ class CropRecommendationSummary {
   final String subtitle;
   final String soilMatchDetails;
   final String actionRoute;
+  final bool hasRecommendation;
+  final String? badgeText;
 
   const CropRecommendationSummary({
     required this.cropName,
@@ -79,6 +81,8 @@ class CropRecommendationSummary {
     required this.subtitle,
     required this.soilMatchDetails,
     this.actionRoute = '/crop-recommendation',
+    this.hasRecommendation = true,
+    this.badgeText,
   });
 }
 

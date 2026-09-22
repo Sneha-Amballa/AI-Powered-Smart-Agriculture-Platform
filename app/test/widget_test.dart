@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_agriculture_app/app/app.dart';
 import 'package:smart_agriculture_app/app/router.dart';
+import 'package:smart_agriculture_app/core/storage/session_storage.dart';
+import 'package:smart_agriculture_app/features/authentication/data/auth_repository.dart';
 import 'package:smart_agriculture_app/features/authentication/domain/models/farmer_profile_model.dart';
 import 'package:smart_agriculture_app/features/authentication/domain/models/user_model.dart';
 import 'package:smart_agriculture_app/features/authentication/presentation/providers/auth_provider.dart';
@@ -357,6 +359,101 @@ void main() {
     // 8. AI Assistant Entry
     expect(find.text('Ask your Agriculture Assistant'), findsOneWidget);
     expect(find.text('Ask AgriAI'), findsOneWidget);
+
+    // 9. Verify no duplicate profile buttons on dashboard (season indicator present instead)
+    expect(find.text('Kharif 2026'), findsOneWidget);
+    expect(find.byTooltip('Farmer Profile'), findsNothing);
+  });
+
+  test('Signing out preserves registered account and profile, allowing re-login directly to dashboard', () async {
+    final storage = SessionStorage();
+    const user = UserModel(
+      id: 'farmer_persisted_1',
+      fullName: 'Suresh Kumar',
+      phoneNumber: '9123456780',
+    );
+    const profile = FarmerProfile(
+      userId: 'farmer_persisted_1',
+      location: FarmerLocation(
+        state: 'Punjab',
+        district: 'Ludhiana',
+        village: 'Khanna',
+        pincode: '141401',
+      ),
+      farmDetails: FarmDetails(
+        landArea: 8.0,
+        areaUnit: 'Acres',
+        irrigationType: 'Canal Irrigation',
+        primaryCrop: 'Wheat',
+      ),
+    );
+
+    // 1. Initial register and profile completion
+    await storage.saveRegisteredAccount(user: user, password: 'password123');
+    await storage.saveUser(user);
+    await storage.saveProfile(profile);
+    await storage.saveToken('token_active_1');
+
+    expect(await storage.hasActiveSession(), isTrue);
+    expect(await storage.hasCompletedProfile(), isTrue);
+
+    // 2. Farmer signs out (Logout)
+    await storage.clearSession();
+
+    // Session token and active user are cleared
+    expect(await storage.hasActiveSession(), isFalse);
+    expect(await storage.getToken(), isNull);
+
+    // BUT registered account and completed profile are NOT deleted!
+    final savedAccount = await storage.getAccountByPhone('9123456780');
+    final savedProfile = await storage.getProfileForPhone('9123456780');
+    expect(savedAccount, isNotNull);
+    expect(savedAccount!.fullName, equals('Suresh Kumar'));
+    expect(savedProfile, isNotNull);
+    expect(savedProfile!.farmDetails.primaryCrop, equals('Wheat'));
+
+    // 3. Farmer signs back in with phone & password via AuthRepository
+    final repository = AuthRepository(storage);
+    final loginResult = await repository.login(
+      phoneNumber: '9123456780',
+      password: 'password123',
+    );
+
+    // Verify session restored with existing completed profile (NO re-setup needed)
+    expect(loginResult.user.phoneNumber, equals('9123456780'));
+    expect(loginResult.profile, isNotNull);
+    expect(loginResult.profile!.location.district, equals('Ludhiana'));
+    expect(await storage.hasActiveSession(), isTrue);
+  });
+
+  test('Account deletion permanently wipes account, credentials, and profile from device', () async {
+    final storage = SessionStorage();
+    const user = UserModel(
+      id: 'farmer_delete_me',
+      fullName: 'Vikram Singh',
+      phoneNumber: '9811223344',
+    );
+    const profile = FarmerProfile(
+      userId: 'farmer_delete_me',
+      location: FarmerLocation(state: 'Haryana', district: 'Karnal', village: 'Nilokheri'),
+      farmDetails: FarmDetails(landArea: 4.5, areaUnit: 'Acres', irrigationType: 'Tube Well'),
+    );
+
+    await storage.saveRegisteredAccount(user: user, password: 'securePass1');
+    await storage.saveUser(user);
+    await storage.saveProfile(profile);
+    await storage.saveToken('token_delete_test');
+
+    expect(await storage.getAccountByPhone('9811223344'), isNotNull);
+    expect(await storage.getProfileForPhone('9811223344'), isNotNull);
+
+    // Explicit Account Deletion
+    await storage.deleteAccount('9811223344');
+
+    // Verify completely deleted
+    expect(await storage.hasActiveSession(), isFalse);
+    expect(await storage.getAccountByPhone('9811223344'), isNull);
+    expect(await storage.getProfileForPhone('9811223344'), isNull);
   });
 }
 

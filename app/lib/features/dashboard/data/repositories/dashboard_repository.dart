@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../authentication/domain/models/farmer_profile_model.dart';
 import '../../../authentication/domain/models/user_model.dart';
+import '../../../crop_recommendation/data/crop_history_model.dart';
+import '../../../crop_recommendation/data/crop_history_repository.dart';
 import '../../domain/models/dashboard_data.dart';
 
 /// Abstract contract for fetching aggregated farmer dashboard intelligence.
@@ -16,6 +18,11 @@ abstract class DashboardRepository {
 /// Dynamically tailors agronomic decision-support insights to the authenticated
 /// farmer's registered location, landholding size, soil health, and primary crop.
 class DashboardRepositoryImpl implements DashboardRepository {
+  final CropHistoryRepository _historyRepository;
+
+  DashboardRepositoryImpl({CropHistoryRepository? historyRepository})
+      : _historyRepository = historyRepository ?? CropHistoryRepositoryImpl();
+
   @override
   Future<DashboardData> getDashboardData({
     UserModel? user,
@@ -50,8 +57,13 @@ class DashboardRepositoryImpl implements DashboardRepository {
       timestamp: DateTime.now(),
     );
 
-    // Contextual Crop Recommendation Summary
-    final cropSummary = _generateCropSummary(profile?.farmDetails, primaryCrop);
+    // Contextual Crop Recommendation Summary from real history or farm profile
+    final userId = user?.id ?? profile?.userId ?? '';
+    final latestRec = userId.isNotEmpty
+        ? await _historyRepository.getLatestRecommendation(userId)
+        : null;
+
+    final cropSummary = _generateCropSummary(latestRec, profile?.farmDetails, primaryCrop);
 
     // Contextual Market Snapshot for Farmer's Crop
     final market = _generateMarketSnapshot(primaryCrop, profile?.location.district);
@@ -70,13 +82,15 @@ class DashboardRepositoryImpl implements DashboardRepository {
     final activities = [
       RecentActivityItem(
         id: 'act_1',
-        title: 'Crop Recommendation Run',
-        description: '$primaryCrop recommended • 94% AI Match',
-        timestampText: 'Today, 09:30 AM',
+        title: latestRec != null ? 'Crop Recommendation Run' : 'Crop Recommendation Ready',
+        description: latestRec != null
+            ? '${latestRec.recommendedCrop} recommended • ${latestRec.confidence != null ? "${latestRec.confidence!.toInt()}% Match" : "Optimal"}'
+            : 'Farm conditions ready for ML crop analysis',
+        timestampText: latestRec != null ? 'Recent run' : 'Today',
         icon: Icons.eco_rounded,
         accentColor: AppColors.primary,
         route: '/crop-recommendation',
-        badgeLabel: 'LIVE ML',
+        badgeLabel: latestRec != null ? 'LIVE ML' : 'READY',
       ),
       const RecentActivityItem(
         id: 'act_2',
@@ -128,23 +142,40 @@ class DashboardRepositoryImpl implements DashboardRepository {
   }
 
   CropRecommendationSummary _generateCropSummary(
+    CropHistoryItem? latest,
     FarmDetails? farm,
     String defaultCrop,
   ) {
-    final cropName = defaultCrop.contains('/')
-        ? defaultCrop.split('/').first.trim()
-        : defaultCrop;
+    if (latest != null) {
+      final now = DateTime.now();
+      final isToday = latest.createdAt.year == now.year &&
+          latest.createdAt.month == now.month &&
+          latest.createdAt.day == now.day;
+      final dateText = isToday
+          ? 'Generated today'
+          : 'Generated on ${latest.createdAt.day}/${latest.createdAt.month}/${latest.createdAt.year}';
 
-    final soilDesc = farm?.hasSoilReport == true
-        ? 'Soil pH ${farm?.ph ?? 6.5} with N:${farm?.nitrogen?.toInt() ?? 120}, P:${farm?.phosphorus?.toInt() ?? 45}, K:${farm?.potassium?.toInt() ?? 60}'
-        : 'Tailored for ${farm?.soilType ?? "Regional Loam"} soil in Kharif season';
+      return CropRecommendationSummary(
+        cropName: latest.recommendedCrop,
+        confidencePercentage: latest.confidence ?? 94.0,
+        subtitle: dateText,
+        soilMatchDetails: 'Based on ${latest.npkSummary}, pH ${latest.ph.toStringAsFixed(1)}',
+        actionRoute: '/crop-recommendation',
+        hasRecommendation: true,
+        badgeText: latest.confidence != null ? '${latest.confidence!.toInt()}% Match' : 'Recommended',
+      );
+    }
 
+    final hasProfile = farm != null && farm.landArea > 0;
     return CropRecommendationSummary(
-      cropName: cropName,
-      confidencePercentage: 94.0,
-      subtitle: 'Optimal crop match for your current soil & climate',
-      soilMatchDetails: soilDesc,
+      cropName: '',
+      confidencePercentage: 0.0,
+      subtitle: 'Get a recommendation based on your farm conditions.',
+      soilMatchDetails: hasProfile
+          ? 'Ready to analyze your saved ${farm.soilType ?? "farm"} soil data.'
+          : 'AI analyzes your soil nutrients and climate to recommend the most optimal crop.',
       actionRoute: '/crop-recommendation',
+      hasRecommendation: false,
     );
   }
 

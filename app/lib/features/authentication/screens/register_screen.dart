@@ -4,13 +4,18 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/localization/app_language.dart';
+import '../../../core/localization/app_translations.dart';
+import '../../../core/localization/language_selector_sheet.dart';
+import '../../../core/localization/locale_provider.dart';
 import '../../../shared/layouts/app_scaffold.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_logo.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../presentation/providers/auth_provider.dart';
 
-/// Frictionless farmer registration screen: Name, 10-Digit Mobile, Password, Confirm Password.
+/// Frictionless farmer registration screen with mandatory vernacular language selection:
+/// Language, Name, 10-Digit Mobile, Password, Confirm Password.
 /// Zero-cost: No OTP, no email, no bank/Aadhaar details required.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -51,11 +56,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
+    final activeLanguage = ref.read(localeNotifierProvider);
 
     final success = await ref.read(authNotifierProvider.notifier).register(
           fullName: name,
           phoneNumber: phone,
           password: password,
+          preferredLanguage: activeLanguage.code,
         );
 
     if (success && mounted) {
@@ -66,6 +73,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
+    final activeLanguage = ref.watch(localeNotifierProvider);
     final strength = _getPasswordStrength(_password);
 
     return AppScaffold(
@@ -89,10 +97,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   const Center(child: AppLogo(size: 40)),
                   AppSpacing.gapV16,
-                  const Text(
-                    'Create Farmer Account',
+                  Text(
+                    ref.tr('auth_register_title'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -100,16 +108,117 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     ),
                   ),
                   AppSpacing.gapV6,
-                  const Text(
-                    'Quick, free registration for Indian farmers. No OTP or bank details required.',
+                  Text(
+                    ref.tr('auth_register_subtitle'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                       height: 1.4,
                     ),
                   ),
-                  AppSpacing.gapV24,
+                  AppSpacing.gapV20,
+
+                  // MANDATORY & PROMINENT APP LANGUAGE SELECTION SECTION
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.sage.withValues(alpha: 0.35),
+                      borderRadius: AppRadius.radiusLg,
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: AppRadius.radiusSm,
+                              ),
+                              child: const Icon(Icons.translate, color: Colors.white, size: 16),
+                            ),
+                            AppSpacing.gapH10,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ref.tr('auth_select_language'),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    ref.tr('auth_language_hint'),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              icon: const Icon(Icons.tune, size: 14, color: AppColors.primary),
+                              label: Text(
+                                ref.tr('common_edit'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              onPressed: () => showLanguageSelectorSheet(context, ref),
+                            ),
+                          ],
+                        ),
+                        AppSpacing.gapV12,
+
+                        // Horizontal wrap of interactive language pills for frictionless 1-tap switching
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: AppLanguage.values.map((lang) {
+                            final isSelected = lang == activeLanguage;
+                            return ChoiceChip(
+                              label: Text(
+                                '${lang.nativeName} (${lang.badge})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                  color: isSelected ? Colors.white : AppColors.textPrimary,
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: AppColors.primary,
+                              backgroundColor: AppColors.surface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: isSelected ? AppColors.primary : AppColors.cardBorder,
+                                ),
+                              ),
+                              showCheckmark: false,
+                              onSelected: (_) {
+                                ref.read(localeNotifierProvider.notifier).setLanguage(lang, syncUser: false);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapV20,
 
                   // Error banner
                   if (authState.errorMessage != null) ...[
@@ -138,8 +247,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   // Full Name
                   AppTextField(
-                    label: 'Farmer Full Name *',
-                    hintText: 'e.g. Rajesh Sharma / Savita Devi',
+                    label: ref.tr('auth_full_name'),
+                    hintText: ref.tr('auth_full_name_hint'),
                     prefixIcon: Icons.person_outline,
                     controller: _nameController,
                     validator: (v) {
@@ -152,8 +261,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   // Mobile Number
                   AppTextField(
-                    label: 'Mobile Number *',
-                    hintText: '10-digit number (e.g. 9876543210)',
+                    label: ref.tr('auth_phone'),
+                    hintText: ref.tr('auth_phone_hint'),
                     prefixIcon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     controller: _phoneController,
@@ -172,8 +281,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   // Password
                   AppTextField(
-                    label: 'Create Password *',
-                    hintText: 'Minimum 6 characters',
+                    label: ref.tr('auth_password'),
+                    hintText: ref.tr('auth_password_hint'),
                     prefixIcon: Icons.lock_outline,
                     isPassword: true,
                     controller: _passwordController,
@@ -245,8 +354,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   // Confirm Password
                   AppTextField(
-                    label: 'Confirm Password *',
-                    hintText: 'Re-enter your password',
+                    label: ref.tr('auth_confirm_password'),
+                    hintText: ref.tr('auth_confirm_password_hint'),
                     prefixIcon: Icons.lock_clock_outlined,
                     isPassword: true,
                     controller: _confirmPasswordController,
@@ -260,7 +369,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   // Submit Button
                   AppButton(
-                    label: 'Register & Continue to Farm Setup',
+                    label: ref.tr('auth_register_btn'),
                     trailingIcon: Icons.arrow_forward,
                     isLoading: authState.isLoading,
                     onPressed: _handleRegister,
@@ -272,18 +381,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Text(
-                        'Already have an account? ',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                      Text(
+                        '${ref.tr('auth_already_have_account')} ',
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                       ),
                       InkWell(
                         onTap: () => context.go('/login'),
                         borderRadius: BorderRadius.circular(4),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                           child: Text(
-                            'Sign In',
-                            style: TextStyle(
+                            ref.tr('auth_sign_in'),
+                            style: const TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w700,
                               fontSize: 14,
@@ -302,4 +411,3 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 }
-

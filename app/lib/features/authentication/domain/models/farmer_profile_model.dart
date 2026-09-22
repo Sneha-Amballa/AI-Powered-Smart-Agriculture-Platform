@@ -166,12 +166,14 @@ class FarmDetails {
 /// Comprehensive Farmer Profile entity linking location and farm details.
 class FarmerProfile {
   final String userId;
+  final String preferredLanguage;
   final FarmerLocation location;
   final FarmDetails farmDetails;
   final DateTime? updatedAt;
 
   const FarmerProfile({
     required this.userId,
+    this.preferredLanguage = 'en',
     required this.location,
     required this.farmDetails,
     this.updatedAt,
@@ -184,12 +186,14 @@ class FarmerProfile {
 
   FarmerProfile copyWith({
     String? userId,
+    String? preferredLanguage,
     FarmerLocation? location,
     FarmDetails? farmDetails,
     DateTime? updatedAt,
   }) {
     return FarmerProfile(
       userId: userId ?? this.userId,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       location: location ?? this.location,
       farmDetails: farmDetails ?? this.farmDetails,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -199,6 +203,7 @@ class FarmerProfile {
   Map<String, dynamic> toJson() {
     return {
       'user_id': userId,
+      'preferred_language': preferredLanguage,
       'location': location.toJson(),
       'farm_details': farmDetails.toJson(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -208,6 +213,7 @@ class FarmerProfile {
   factory FarmerProfile.fromJson(Map<String, dynamic> json) {
     return FarmerProfile(
       userId: json['user_id']?.toString() ?? '',
+      preferredLanguage: json['preferred_language'] as String? ?? 'en',
       location: json['location'] != null
           ? FarmerLocation.fromJson(json['location'] as Map<String, dynamic>)
           : FarmerLocation(

@@ -20,6 +20,7 @@ class AuthService:
             full_name=user_in.full_name.strip(),
             phone_number=user_in.phone_number.strip(),
             hashed_password=get_password_hash(user_in.password),
+            preferred_language=(user_in.preferred_language or "en").strip().lower(),
             is_active=True,
         )
         db.add(db_user)
@@ -110,9 +111,28 @@ class AuthService:
             details.irrigation_type = farm.irrigation_type
             details.primary_crop = farm.primary_crop
 
+        if setup_in.preferred_language:
+            user.preferred_language = setup_in.preferred_language
+            if profile:
+                profile.preferred_language = setup_in.preferred_language
+
         db.commit()
         db.refresh(profile)
         return profile
+
+    def update_user_language(self, db: Session, user_id: int, language: str) -> User:
+        """Update farmer's preferred language globally in User and FarmerProfile."""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError(f"User with ID {user_id} not found")
+        
+        user.preferred_language = language
+        if user.profile:
+            user.profile.preferred_language = language
+            
+        db.commit()
+        db.refresh(user)
+        return user
 
     def get_farmer_profile(self, db: Session, user_id: int) -> Optional[User]:
         """Fetch user with profile and farm details."""

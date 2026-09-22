@@ -133,6 +133,10 @@ final GoRouter appRouter = GoRouter(
           builder: (context, state) => const CropRecommendationPage(),
         ),
         GoRoute(
+          path: '/crop-history',
+          builder: (context, state) => const CropRecommendationPage(initialTabIndex: 1),
+        ),
+        GoRoute(
           path: '/disease-detection',
           builder: (context, state) => const DiseaseDetectionScreen(),
         ),

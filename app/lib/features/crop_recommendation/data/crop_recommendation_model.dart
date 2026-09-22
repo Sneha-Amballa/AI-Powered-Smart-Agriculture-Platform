@@ -18,6 +18,38 @@ class CropRecommendationInput {
     required this.rainfall,
   });
 
+  factory CropRecommendationInput.fromJson(Map<String, dynamic> json) {
+    return CropRecommendationInput(
+      nitrogen: (json['N'] as num?)?.toDouble() ?? (json['nitrogen'] as num?)?.toDouble() ?? 0.0,
+      phosphorus: (json['P'] as num?)?.toDouble() ?? (json['phosphorus'] as num?)?.toDouble() ?? 0.0,
+      potassium: (json['K'] as num?)?.toDouble() ?? (json['potassium'] as num?)?.toDouble() ?? 0.0,
+      temperature: (json['temperature'] as num?)?.toDouble() ?? 0.0,
+      humidity: (json['humidity'] as num?)?.toDouble() ?? 0.0,
+      ph: (json['ph'] as num?)?.toDouble() ?? 7.0,
+      rainfall: (json['rainfall'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  CropRecommendationInput copyWith({
+    double? nitrogen,
+    double? phosphorus,
+    double? potassium,
+    double? temperature,
+    double? humidity,
+    double? ph,
+    double? rainfall,
+  }) {
+    return CropRecommendationInput(
+      nitrogen: nitrogen ?? this.nitrogen,
+      phosphorus: phosphorus ?? this.phosphorus,
+      potassium: potassium ?? this.potassium,
+      temperature: temperature ?? this.temperature,
+      humidity: humidity ?? this.humidity,
+      ph: ph ?? this.ph,
+      rainfall: rainfall ?? this.rainfall,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'N': nitrogen,
         'P': phosphorus,
@@ -38,6 +70,11 @@ class CropAlternative {
     required this.confidence,
   });
 
+  Map<String, dynamic> toJson() => {
+        'crop': crop,
+        'confidence': confidence,
+      };
+
   factory CropAlternative.fromJson(Map<String, dynamic> json) {
     return CropAlternative(
       crop: json['crop']?.toString() ?? '',
@@ -54,6 +91,11 @@ class CropRecommendationResult {
     required this.recommendedCrop,
     required this.recommendations,
   });
+
+  Map<String, dynamic> toJson() => {
+        'recommended_crop': recommendedCrop,
+        'recommendations': recommendations.map((a) => a.toJson()).toList(),
+      };
 
   factory CropRecommendationResult.fromJson(Map<String, dynamic> json) {
     var rawList = json['recommendations'];

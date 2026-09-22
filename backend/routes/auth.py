@@ -8,6 +8,7 @@ from backend.schemas.auth import (
     AuthResponse,
     FarmerProfileSetup,
     FarmerProfileResponse,
+    LanguageUpdate,
 )
 from backend.services.auth_service import auth_service
 
@@ -85,4 +86,26 @@ def get_farmer_profile(user_id: int, db: Session = Depends(get_db)):
             detail=f"Farmer profile for user {user_id} not found",
         )
     return user
+
+
+@router.patch(
+    "/profile/{user_id}/language",
+    response_model=UserResponse,
+    summary="Update farmer preferred language preference",
+)
+def update_farmer_language(
+    user_id: int,
+    lang_in: LanguageUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update global language preference for farmer profile and user."""
+    try:
+        user = auth_service.update_user_language(db, user_id, lang_in.preferred_language)
+        return user
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
 

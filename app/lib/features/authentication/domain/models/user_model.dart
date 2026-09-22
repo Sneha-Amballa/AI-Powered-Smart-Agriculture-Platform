@@ -3,12 +3,14 @@ class UserModel {
   final String id;
   final String fullName;
   final String phoneNumber;
+  final String preferredLanguage;
   final DateTime? createdAt;
 
   const UserModel({
     required this.id,
     required this.fullName,
     required this.phoneNumber,
+    this.preferredLanguage = 'en',
     this.createdAt,
   });
 
@@ -16,12 +18,14 @@ class UserModel {
     String? id,
     String? fullName,
     String? phoneNumber,
+    String? preferredLanguage,
     DateTime? createdAt,
   }) {
     return UserModel(
       id: id ?? this.id,
       fullName: fullName ?? this.fullName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -31,6 +35,7 @@ class UserModel {
       'id': id,
       'full_name': fullName,
       'phone_number': phoneNumber,
+      'preferred_language': preferredLanguage,
       'created_at': createdAt?.toIso8601String(),
     };
   }
@@ -40,6 +45,7 @@ class UserModel {
       id: json['id']?.toString() ?? '',
       fullName: json['full_name'] as String? ?? json['name'] as String? ?? '',
       phoneNumber: json['phone_number'] as String? ?? json['phone'] as String? ?? '',
+      preferredLanguage: json['preferred_language'] as String? ?? 'en',
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -52,13 +58,14 @@ class UserModel {
       other is UserModel &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          phoneNumber == other.phoneNumber;
+          phoneNumber == other.phoneNumber &&
+          preferredLanguage == other.preferredLanguage;
 
   @override
-  int get hashCode => id.hashCode ^ phoneNumber.hashCode;
+  int get hashCode => id.hashCode ^ phoneNumber.hashCode ^ preferredLanguage.hashCode;
 
   @override
   String toString() =>
-      'UserModel(id: $id, fullName: $fullName, phoneNumber: $phoneNumber)';
+      'UserModel(id: $id, fullName: $fullName, phoneNumber: $phoneNumber, preferredLanguage: $preferredLanguage)';
 }
 

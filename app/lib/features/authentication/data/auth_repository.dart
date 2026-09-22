@@ -39,6 +39,7 @@ class AuthRepository {
     required String fullName,
     required String phoneNumber,
     required String password,
+    String preferredLanguage = 'en',
   }) async {
     final cleanPhone = cleanPhoneNumber(phoneNumber);
     if (!isValidIndianMobile(cleanPhone)) {
@@ -57,13 +58,17 @@ class AuthRepository {
       id: userId,
       fullName: fullName.trim(),
       phoneNumber: cleanPhone,
+      preferredLanguage: preferredLanguage,
       createdAt: DateTime.now(),
     );
 
     final sessionToken = 'kisan_sess_${base64Url.encode(utf8.encode('$userId:$cleanPhone'))}';
 
+    // Save to persistent multi-account storage and active session
+    await _storage.saveRegisteredAccount(user: user, password: password);
     await _storage.saveUser(user);
     await _storage.saveToken(sessionToken);
+    await _storage.saveLanguage(preferredLanguage);
 
     return user;
   }
@@ -81,33 +86,40 @@ class AuthRepository {
       throw const FormatException('Please enter your account password');
     }
 
-    final existingUser = await _storage.getUser();
-    final existingProfile = await _storage.getProfile();
+    // 1. Look up persistent account for this phone number
+    final existingAccount = await _storage.getAccountByPhone(cleanPhone);
+    if (existingAccount != null) {
+      // Verify credentials
+      final isPasswordValid = await _storage.verifyPassword(cleanPhone, password);
+      if (!isPasswordValid) {
+        throw const FormatException('Incorrect password. Please verify and try again.');
+      }
 
-    // If user matches previously saved local user
-    if (existingUser != null && existingUser.phoneNumber == cleanPhone) {
-      final token = 'kisan_sess_${base64Url.encode(utf8.encode('${existingUser.id}:$cleanPhone'))}';
+      // Retrieve persistent farmer profile associated with this account
+      final existingProfile = await _storage.getProfileForPhone(cleanPhone);
+      final token = 'kisan_sess_${base64Url.encode(utf8.encode('${existingAccount.id}:$cleanPhone'))}';
+
+      // Restore active session
+      await _storage.saveUser(existingAccount);
       await _storage.saveToken(token);
-      return (user: existingUser, profile: existingProfile);
+      if (existingAccount.preferredLanguage.isNotEmpty) {
+        await _storage.saveLanguage(existingAccount.preferredLanguage);
+      }
+      if (existingProfile != null) {
+        await _storage.saveProfile(existingProfile);
+      }
+
+      return (user: existingAccount, profile: existingProfile);
     }
 
-    // Commercial sample farmer login fallback (e.g. 9876543210)
-    final sampleUserId = 'farmer_sample_${cleanPhone.substring(cleanPhone.length - 4)}';
-    final sampleUser = UserModel(
-      id: sampleUserId,
-      fullName: cleanPhone == '9876543210' ? 'Rajesh Sharma' : 'Farmer $cleanPhone',
-      phoneNumber: cleanPhone,
-      createdAt: DateTime.now(),
-    );
-
-    final token = 'kisan_sess_${base64Url.encode(utf8.encode('$sampleUserId:$cleanPhone'))}';
-    await _storage.saveUser(sampleUser);
-    await _storage.saveToken(token);
-
-    // If logging into default demo account, prepare prefilled demo profile
-    FarmerProfile? profile;
+    // 2. Demo account prefilled fallback (e.g. 9876543210)
     if (cleanPhone == '9876543210') {
-      profile = const FarmerProfile(
+      const demoUser = UserModel(
+        id: 'farmer_sample_3210',
+        fullName: 'Rajesh Sharma',
+        phoneNumber: '9876543210',
+      );
+      const demoProfile = FarmerProfile(
         userId: 'farmer_sample_3210',
         location: FarmerLocation(
           state: 'Andhra Pradesh',
@@ -128,15 +140,40 @@ class AuthRepository {
           farmingExperienceYears: 12,
         ),
       );
-      await _storage.saveProfile(profile);
+
+      await _storage.saveRegisteredAccount(user: demoUser, password: password);
+      await _storage.saveProfileForPhone('9876543210', demoProfile);
+      await _storage.saveUser(demoUser);
+      await _storage.saveToken('kisan_sess_demo_3210');
+      await _storage.saveProfile(demoProfile);
+
+      return (user: demoUser, profile: demoProfile);
     }
 
-    return (user: sampleUser, profile: profile ?? existingProfile);
+    // 3. Fallback for new farmer logging in directly in offline/demo environment
+    final sampleUserId = 'farmer_${cleanPhone.substring(cleanPhone.length - 4)}';
+    final sampleUser = UserModel(
+      id: sampleUserId,
+      fullName: 'Farmer $cleanPhone',
+      phoneNumber: cleanPhone,
+      createdAt: DateTime.now(),
+    );
+
+    final token = 'kisan_sess_${base64Url.encode(utf8.encode('$sampleUserId:$cleanPhone'))}';
+    await _storage.saveRegisteredAccount(user: sampleUser, password: password);
+    await _storage.saveUser(sampleUser);
+    await _storage.saveToken(token);
+
+    return (user: sampleUser, profile: null);
   }
 
   /// Save completed or updated farmer profile.
   Future<FarmerProfile> saveFarmerProfile(FarmerProfile profile) async {
     await _storage.saveProfile(profile);
+    final user = await _storage.getUser();
+    if (user != null && user.phoneNumber.isNotEmpty) {
+      await _storage.saveProfileForPhone(user.phoneNumber, profile);
+    }
     return profile;
   }
 
@@ -148,9 +185,41 @@ class AuthRepository {
     return (user: user, profile: profile, token: token);
   }
 
-  /// Logout and wipe stored session credentials.
+  /// Logout and clear active session token.
+  /// Does NOT delete the farmer's registered account or saved profile.
   Future<void> logout() async {
     await _storage.clearSession();
+  }
+
+  /// Permanently delete farmer account and wipe profile data from this device.
+  Future<void> deleteAccount() async {
+    final user = await _storage.getUser();
+    if (user != null && user.phoneNumber.isNotEmpty) {
+      await _storage.deleteAccount(user.phoneNumber);
+    } else {
+      await _storage.clearSession();
+    }
+  }
+
+  /// Update farmer preferred language in active user, persistent registry, and storage.
+  Future<UserModel?> updateLanguage(String languageCode) async {
+    final user = await _storage.getUser();
+    await _storage.saveLanguage(languageCode);
+    if (user != null) {
+      final updatedUser = user.copyWith(preferredLanguage: languageCode);
+      await _storage.saveUser(updatedUser);
+
+      final profile = await _storage.getProfile();
+      if (profile != null) {
+        final updatedProfile = profile.copyWith(preferredLanguage: languageCode);
+        await _storage.saveProfile(updatedProfile);
+        if (user.phoneNumber.isNotEmpty) {
+          await _storage.saveProfileForPhone(user.phoneNumber, updatedProfile);
+        }
+      }
+      return updatedUser;
+    }
+    return null;
   }
 }
 

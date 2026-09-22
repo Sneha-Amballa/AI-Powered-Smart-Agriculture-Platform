@@ -3,10 +3,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_badge.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../domain/models/dashboard_data.dart';
 
-/// Crop recommendation summary widget communicating optimal crop match and AI confidence.
+/// Crop recommendation summary widget communicating optimal crop match or prompt to recommend.
 class CropRecommendationSummaryCard extends StatelessWidget {
   final CropRecommendationSummary crop;
 
@@ -17,6 +18,10 @@ class CropRecommendationSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!crop.hasRecommendation || crop.cropName.isEmpty) {
+      return _buildEmptyCard(context);
+    }
+
     return AppCard(
       onTap: () => context.go(crop.actionRoute),
       child: Column(
@@ -33,12 +38,13 @@ class CropRecommendationSummaryCard extends StatelessWidget {
                     AppSpacing.gapH6,
                     Flexible(
                       child: Text(
-                        'Crop Recommendation',
+                        'LATEST CROP RECOMMENDATION',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -56,7 +62,7 @@ class CropRecommendationSummaryCard extends StatelessWidget {
                   ),
                 ),
                 child: Text(
-                  '${crop.confidencePercentage.toInt()}% AI Match',
+                  crop.badgeText ?? '${crop.confidencePercentage.toInt()}% Match',
                   style: const TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
@@ -69,7 +75,7 @@ class CropRecommendationSummaryCard extends StatelessWidget {
           AppSpacing.gapV4,
           Text(
             crop.subtitle,
-            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
           ),
           AppSpacing.gapV14,
 
@@ -151,28 +157,117 @@ class CropRecommendationSummaryCard extends StatelessWidget {
           ),
           AppSpacing.gapV8,
 
-          // Action Link
+          // Action Link: View Recommendation
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => context.go(crop.actionRoute),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 28),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Text(
-                'View Recommendation',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => context.go(crop.actionRoute),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Text(
+                  'View Recommendation',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                label: const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
                   color: AppColors.primary,
                 ),
               ),
-              label: const Icon(
-                Icons.arrow_forward_rounded,
-                size: 14,
-                color: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCard(BuildContext context) {
+    return AppCard(
+      onTap: () => context.go(crop.actionRoute),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                    AppSpacing.gapH6,
+                    Flexible(
+                      child: Text(
+                        'LATEST CROP RECOMMENDATION',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AppBadge(label: 'READY', variant: BadgeVariant.neutral),
+            ],
+          ),
+          AppSpacing.gapV10,
+          Text(
+            crop.subtitle.isNotEmpty
+                ? crop.subtitle
+                : 'Get a recommendation based on your farm conditions.',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          AppSpacing.gapV6,
+          Text(
+            crop.soilMatchDetails.isNotEmpty
+                ? crop.soilMatchDetails
+                : 'AI analyzes your soil nutrients and climate to recommend the most optimal crop.',
+            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, height: 1.3),
+          ),
+          AppSpacing.gapV12,
+          Align(
+            alignment: Alignment.centerRight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => context.go(crop.actionRoute),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Text(
+                  'Get Crop Recommendation',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                label: const Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: AppColors.primary,
+                ),
               ),
             ),
           ),

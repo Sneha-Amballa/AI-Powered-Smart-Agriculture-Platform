@@ -1,6 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/network_client.dart';
 import 'crop_recommendation_model.dart';
+
+final cropRecommendationServiceProvider = Provider<CropRecommendationService>((ref) {
+  return CropRecommendationService();
+});
 
 /// Network service interfacing with the deployed Machine Learning Crop Recommendation API.
 class CropRecommendationService {
@@ -33,3 +38,4 @@ class CropRecommendationService {
     }
   }
 }
+

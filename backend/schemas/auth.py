@@ -8,6 +8,7 @@ class UserRegister(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=100)
     phone_number: str = Field(..., min_length=10, max_length=15)
     password: str = Field(..., min_length=6)
+    preferred_language: Optional[str] = Field("en", min_length=2, max_length=5)
 
 
 class UserLogin(BaseModel):
@@ -47,6 +48,7 @@ class FarmDetailsSetup(BaseModel):
 
 class FarmerProfileSetup(BaseModel):
     """Complete multi-step onboarding payload."""
+    preferred_language: Optional[str] = Field(None, min_length=2, max_length=5)
     location: LocationSetup
     farm_details: FarmDetailsSetup
 
@@ -72,6 +74,7 @@ class FarmDetailsResponse(BaseModel):
 class FarmerProfileResponse(BaseModel):
     id: int
     user_id: int
+    preferred_language: str = "en"
     state: str
     district: str
     village: str
@@ -88,12 +91,18 @@ class UserResponse(BaseModel):
     id: int
     full_name: str
     phone_number: str
+    preferred_language: str = "en"
     is_active: bool
     created_at: datetime
     profile: Optional[FarmerProfileResponse] = None
 
     class Config:
         from_attributes = True
+
+
+class LanguageUpdate(BaseModel):
+    """Payload to update farmer preferred language."""
+    preferred_language: str = Field(..., min_length=2, max_length=5)
 
 
 class AuthResponse(BaseModel):

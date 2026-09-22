@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/localization/locale_provider.dart';
 import '../../../authentication/domain/models/farmer_profile_model.dart';
 import '../../../authentication/domain/models/user_model.dart';
 
 /// Personalized farmer greeting header with dynamic profile status and incomplete warning.
-class DashboardHeader extends StatelessWidget {
+class DashboardHeader extends ConsumerWidget {
   final UserModel? user;
   final FarmerProfile? profile;
   final bool isProfileComplete;
@@ -48,8 +50,9 @@ class DashboardHeader extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final greeting = _getGreeting();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeLang = ref.watch(localeNotifierProvider);
+    final greeting = activeLang.greeting;
     final name = _getFarmerName();
     final locationText = _getLocationSummary();
 
@@ -112,14 +115,35 @@ class DashboardHeader extends StatelessWidget {
             ),
             AppSpacing.gapH8,
 
-            // Profile Quick Action Button
-            IconButton(
-              tooltip: 'Farmer Profile',
-              onPressed: () => context.go('/profile'),
-              icon: const Icon(
-                Icons.account_circle_outlined,
-                color: AppColors.primary,
-                size: 26,
+            // Active Farm Season Indicator (Replaces duplicate profile button)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.radiusPill,
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: AppColors.success,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Kharif 2026',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

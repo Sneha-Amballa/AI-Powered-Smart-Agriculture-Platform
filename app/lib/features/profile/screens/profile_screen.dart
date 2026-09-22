@@ -9,6 +9,10 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_dropdown.dart';
 import '../../../shared/widgets/app_outlined_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
+import '../../../core/localization/app_language.dart';
+import '../../../core/localization/app_translations.dart';
+import '../../../core/localization/language_selector_sheet.dart';
+import '../../../core/localization/locale_provider.dart';
 import '../../authentication/domain/models/farmer_profile_model.dart';
 import '../../authentication/presentation/providers/auth_provider.dart';
 
@@ -26,7 +30,51 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your farmer account?'),
+        content: const Text(
+          'Are you sure you want to sign out? Your farm profile, crops, and data will remain safely saved on this device for your next login.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(authNotifierProvider.notifier).logout();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Signed out successfully. Your farm profile is preserved.')),
+                );
+                context.go('/login');
+              }
+            },
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            SizedBox(width: 8),
+            Expanded(child: Text('Delete Account Permanently?')),
+          ],
+        ),
+        content: const Text(
+          'This action cannot be undone. All your saved farm profile details, soil test data, crop advisory records, and account credentials will be permanently erased from this device.',
+          style: TextStyle(fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -39,15 +87,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(authNotifierProvider.notifier).logout();
+              await ref.read(authNotifierProvider.notifier).deleteAccount();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Signed out successfully')),
+                  const SnackBar(
+                    content: Text('Your account and all farm records have been permanently deleted.'),
+                    backgroundColor: AppColors.error,
+                  ),
                 );
                 context.go('/login');
               }
             },
-            child: const Text('Sign Out'),
+            child: const Text('Delete Permanently'),
           ),
         ],
       ),
@@ -353,6 +404,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
+    final activeLang = ref.watch(localeNotifierProvider);
     final user = authState.user;
     final profile = authState.profile;
 
@@ -390,15 +442,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                     AppSpacing.gapV4,
                     Text(
-                      '+91 $farmerPhone • $locationText',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                      '+91 $farmerPhone',
+                      style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                    ),
+                    AppSpacing.gapV4,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            locationText,
+                            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
                     ),
                     AppSpacing.gapV16,
                     Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
                       alignment: WrapAlignment.center,
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
                       children: [
                         if (profile != null) ...[
                           AppOutlinedButton(
@@ -416,8 +484,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         AppOutlinedButton(
                           label: 'Sign Out',
                           leadingIcon: Icons.logout,
-                          textColor: AppColors.error,
-                          borderColor: AppColors.error,
                           onPressed: () => _showLogoutDialog(context),
                         ),
                       ],
@@ -431,7 +497,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildProfileItem(Icons.water_drop_outlined, 'Irrigation Facility', irrigationText),
                     _buildProfileItem(Icons.eco_outlined, 'Primary Cultivated Crop', cropText),
                     _buildProfileItem(Icons.history_outlined, 'Farming Experience', expText),
-                    _buildProfileItem(Icons.translate_outlined, 'Preferred Language', 'English / Regional'),
+                    _buildProfileItem(
+                      Icons.translate_outlined,
+                      ref.tr('profile_preferred_language'),
+                      activeLang.displayName,
+                      onEdit: () => showLanguageSelectorSheet(context, ref),
+                    ),
 
                     AppSpacing.gapV16,
                     Container(
@@ -470,6 +541,222 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
+              AppSpacing.gapV16,
+              // Dedicated App Language Preferences Card
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.sage,
+                            borderRadius: AppRadius.radiusSm,
+                          ),
+                          child: const Icon(
+                            Icons.translate_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        AppSpacing.gapH12,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                ref.tr('profile_preferred_language'),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              AppSpacing.gapV2,
+                              Text(
+                                ref.tr('profile_language_description'),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapV16,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: AppRadius.radiusMd,
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isNarrow = constraints.maxWidth < 360;
+                          if (isNarrow) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary,
+                                        borderRadius: AppRadius.radiusSm,
+                                      ),
+                                      child: Text(
+                                        activeLang.badge,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                    AppSpacing.gapH12,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            activeLang.displayName,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${activeLang.greeting}! • Active App Language',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                AppSpacing.gapV12,
+                                AppButton(
+                                  label: ref.tr('profile_change_language'),
+                                  leadingIcon: Icons.tune,
+                                  onPressed: () => showLanguageSelectorSheet(context, ref),
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: AppRadius.radiusSm,
+                                ),
+                                child: Text(
+                                  activeLang.badge,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              AppSpacing.gapH12,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      activeLang.displayName,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${activeLang.greeting}! • Active App Language',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              AppSpacing.gapH12,
+                              AppButton(
+                                label: ref.tr('profile_change_language'),
+                                leadingIcon: Icons.tune,
+                                onPressed: () => showLanguageSelectorSheet(context, ref),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AppSpacing.gapV16,
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Account & Data Management',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    AppSpacing.gapV4,
+                    const Text(
+                      'Sign Out ends your active session while keeping all farm records and soil data safely preserved. Delete Account permanently clears all records.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                    ),
+                    AppSpacing.gapV16,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppOutlinedButton(
+                            label: 'Sign Out',
+                            leadingIcon: Icons.logout,
+                            onPressed: () => _showLogoutDialog(context),
+                          ),
+                        ),
+                        AppSpacing.gapH12,
+                        Expanded(
+                          child: AppOutlinedButton(
+                            label: 'Delete Account',
+                            leadingIcon: Icons.delete_forever_outlined,
+                            textColor: AppColors.error,
+                            borderColor: AppColors.error,
+                            onPressed: () => _showDeleteAccountDialog(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -477,7 +764,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileItem(IconData icon, String label, String value) {
+  Widget _buildProfileItem(
+    IconData icon,
+    String label,
+    String value, {
+    VoidCallback? onEdit,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -512,6 +804,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
+          if (onEdit != null)
+            InkWell(
+              onTap: onEdit,
+              borderRadius: AppRadius.radiusSm,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.sage,
+                  borderRadius: AppRadius.radiusSm,
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.edit, size: 12, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      ref.tr('common_edit'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

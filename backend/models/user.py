@@ -15,6 +15,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    preferred_language = Column(String, default="en", nullable=False)
 
     # Relationship to 1-to-1 Farmer Profile
     profile = relationship(
@@ -46,7 +47,8 @@ class FarmerProfile(Base):
         nullable=False,
     )
 
-    # Location Information (Manual, No GPS permission)
+    # Preferred Language & Location Information
+    preferred_language = Column(String, default="en", nullable=False)
     state = Column(String, nullable=False)
     district = Column(String, nullable=False)
     village = Column(String, nullable=False)

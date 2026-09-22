@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
+import '../../core/localization/app_translations.dart';
 
-/// Polished mobile bottom navigation bar with icons and text labels.
-class AppBottomNav extends StatelessWidget {
+/// Polished mobile bottom navigation bar with icons and reactive vernacular text labels.
+class AppBottomNav extends ConsumerWidget {
   final int currentIndex;
 
   const AppBottomNav({
@@ -20,7 +22,7 @@ class AppBottomNav extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surface,
@@ -36,31 +38,31 @@ class AppBottomNav extends StatelessWidget {
         backgroundColor: AppColors.surface,
         elevation: 0,
         indicatorColor: AppColors.sage,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppColors.primary),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home, color: AppColors.primary),
+            label: ref.tr('nav_home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.eco_outlined),
-            selectedIcon: Icon(Icons.eco, color: AppColors.primary),
-            label: 'Crops',
+            icon: const Icon(Icons.eco_outlined),
+            selectedIcon: const Icon(Icons.eco, color: AppColors.primary),
+            label: ref.tr('nav_crops'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.health_and_safety_outlined),
-            selectedIcon: Icon(Icons.health_and_safety, color: AppColors.primary),
-            label: 'Health',
+            icon: const Icon(Icons.health_and_safety_outlined),
+            selectedIcon: const Icon(Icons.health_and_safety, color: AppColors.primary),
+            label: ref.tr('nav_health'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront, color: AppColors.primary),
-            label: 'Market',
+            icon: const Icon(Icons.storefront_outlined),
+            selectedIcon: const Icon(Icons.storefront, color: AppColors.primary),
+            label: ref.tr('nav_market'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.forum_outlined),
-            selectedIcon: Icon(Icons.forum, color: AppColors.primary),
-            label: 'Assistant',
+            icon: const Icon(Icons.forum_outlined),
+            selectedIcon: const Icon(Icons.forum, color: AppColors.primary),
+            label: ref.tr('nav_assistant'),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
+import '../../core/localization/app_translations.dart';
 import '../../features/authentication/presentation/providers/auth_provider.dart';
 import '../widgets/app_divider.dart';
 import '../widgets/app_logo.dart';
@@ -22,7 +23,9 @@ class AppDrawer extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out of your farmer account?'),
+        content: const Text(
+          'Are you sure you want to sign out? Your farmer profile, farm details, and crop records will remain saved on this device for your next login.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -30,13 +33,16 @@ class AppDrawer extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authNotifierProvider.notifier).logout();
               if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Signed out successfully. Your farm profile is preserved.')),
+                );
                 context.go('/login');
               }
             },
@@ -103,7 +109,7 @@ class AppDrawer extends ConsumerWidget {
                   _buildSectionHeader('MAIN'),
                   _buildNavItem(
                     context: context,
-                    title: 'Dashboard',
+                    title: ref.tr('nav_dashboard'),
                     icon: Icons.dashboard_outlined,
                     path: '/dashboard',
                   ),
@@ -111,14 +117,14 @@ class AppDrawer extends ConsumerWidget {
                   _buildSectionHeader('FARMING'),
                   _buildNavItem(
                     context: context,
-                    title: 'Crop Recommendation',
+                    title: ref.tr('nav_crop_recommendation'),
                     icon: Icons.eco_outlined,
                     path: '/crop-recommendation',
                     isLive: true,
                   ),
                   _buildNavItem(
                     context: context,
-                    title: 'Disease Detection',
+                    title: ref.tr('nav_disease_detection'),
                     icon: Icons.biotech_outlined,
                     path: '/disease-detection',
                   ),
@@ -126,19 +132,19 @@ class AppDrawer extends ConsumerWidget {
                   _buildSectionHeader('INSIGHTS'),
                   _buildNavItem(
                     context: context,
-                    title: 'Weather & Advisory',
+                    title: ref.tr('nav_weather'),
                     icon: Icons.cloud_outlined,
                     path: '/weather',
                   ),
                   _buildNavItem(
                     context: context,
-                    title: 'Market Prices',
+                    title: ref.tr('nav_market'),
                     icon: Icons.trending_up_outlined,
                     path: '/market',
                   ),
                   _buildNavItem(
                     context: context,
-                    title: 'Price Prediction',
+                    title: ref.tr('nav_price_prediction'),
                     icon: Icons.timeline_outlined,
                     path: '/price-prediction',
                   ),
@@ -146,13 +152,13 @@ class AppDrawer extends ConsumerWidget {
                   _buildSectionHeader('SUPPORT'),
                   _buildNavItem(
                     context: context,
-                    title: 'Government Schemes',
+                    title: ref.tr('nav_schemes'),
                     icon: Icons.account_balance_outlined,
                     path: '/government-schemes',
                   ),
                   _buildNavItem(
                     context: context,
-                    title: 'AI Assistant',
+                    title: ref.tr('nav_assistant'),
                     icon: Icons.forum_outlined,
                     path: '/assistant',
                   ),
@@ -160,13 +166,13 @@ class AppDrawer extends ConsumerWidget {
                   _buildSectionHeader('ACCOUNT'),
                   _buildNavItem(
                     context: context,
-                    title: 'Farmer Profile',
+                    title: ref.tr('nav_profile'),
                     icon: Icons.person_outline,
                     path: '/profile',
                   ),
                   _buildNavItem(
                     context: context,
-                    title: 'Settings',
+                    title: ref.tr('nav_settings'),
                     icon: Icons.settings_outlined,
                     path: '/settings',
                   ),
@@ -191,9 +197,9 @@ class AppDrawer extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.logout, color: AppColors.error, size: 22),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
+              title: Text(
+                ref.tr('nav_logout'),
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.error,

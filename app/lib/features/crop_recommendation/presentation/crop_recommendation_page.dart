@@ -1,149 +1,319 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../shared/widgets/app_badge.dart';
-import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_error_state.dart';
-import '../../../shared/widgets/app_text_field.dart';
-import '../data/crop_recommendation_model.dart';
-import '../data/crop_recommendation_repository.dart';
+import 'providers/crop_history_provider.dart';
+import 'providers/crop_history_state.dart';
+import 'providers/crop_recommendation_provider.dart';
+import 'providers/crop_recommendation_state.dart';
+import 'widgets/crop_history_detail_sheet.dart';
+import 'widgets/crop_history_view.dart';
+import 'widgets/environmental_conditions_card.dart';
+import 'widgets/ready_recommendation_card.dart';
+import 'widgets/recommendation_result_card.dart';
+import 'widgets/soil_information_card.dart';
 
-/// Production-ready Crop Recommendation UI wired to the deployed Render ML service.
-class CropRecommendationPage extends StatefulWidget {
-  const CropRecommendationPage({super.key});
+/// Production-quality Crops Hub & Zero Re-entry Recommendation Screen.
+///
+/// Automatically hydrates farmer profile data (NPK, pH, Soil Type, Location, Landholding).
+/// Implements transparent climate separation, progressive disclosure review,
+/// immutable audit-trailed Crop History, and responsible AI trust messaging.
+class CropRecommendationPage extends ConsumerStatefulWidget {
+  final int initialTabIndex;
+
+  const CropRecommendationPage({
+    super.key,
+    this.initialTabIndex = 0,
+  });
 
   @override
-  State<CropRecommendationPage> createState() => _CropRecommendationPageState();
+  ConsumerState<CropRecommendationPage> createState() => _CropRecommendationPageState();
 }
 
-class _CropRecommendationPageState extends State<CropRecommendationPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _nController = TextEditingController(text: '90');
-  final _pController = TextEditingController(text: '42');
-  final _kController = TextEditingController(text: '43');
-  final _tempController = TextEditingController(text: '20.87');
-  final _humidityController = TextEditingController(text: '82.0');
-  final _phController = TextEditingController(text: '6.5');
-  final _rainfallController = TextEditingController(text: '202.93');
-
-  bool _isLoading = false;
-  String? _errorMessage;
-  CropRecommendationResult? _result;
-
-  late final CropRecommendationRepository _repository;
+class _CropRecommendationPageState extends ConsumerState<CropRecommendationPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _repository = CropRecommendationRepositoryImpl();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
+    );
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    _nController.dispose();
-    _pController.dispose();
-    _kController.dispose();
-    _tempController.dispose();
-    _humidityController.dispose();
-    _phController.dispose();
-    _rainfallController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _loadPreset(
-    double n,
-    double p,
-    double k,
-    double temp,
-    double hum,
-    double ph,
-    double rain,
-  ) {
-    setState(() {
-      _nController.text = n.toString();
-      _pController.text = p.toString();
-      _kController.text = k.toString();
-      _tempController.text = temp.toString();
-      _humidityController.text = hum.toString();
-      _phController.text = ph.toString();
-      _rainfallController.text = rain.toString();
-    });
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    final input = CropRecommendationInput(
-      nitrogen: double.tryParse(_nController.text) ?? 90.0,
-      phosphorus: double.tryParse(_pController.text) ?? 42.0,
-      potassium: double.tryParse(_kController.text) ?? 43.0,
-      temperature: double.tryParse(_tempController.text) ?? 20.87,
-      humidity: double.tryParse(_humidityController.text) ?? 82.0,
-      ph: double.tryParse(_phController.text) ?? 6.5,
-      rainfall: double.tryParse(_rainfallController.text) ?? 202.93,
-    );
-
-    try {
-      final res = await _repository.getRecommendation(input);
-      setState(() {
-        _result = res;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = e.toString();
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  String _formatShortDate(DateTime dt) {
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final recState = ref.watch(cropRecommendationNotifierProvider);
+    final historyState = ref.watch(cropHistoryNotifierProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Crops Hub Segmented Tab Selector
+                  _buildCropsHubHeader(historyState.items.length),
+                  AppSpacing.gapV16,
+
+                  if (_tabController.index == 0) ...[
+                    // Tab 0: Zero Re-entry Crop Recommendation Flow
+                    _buildRecommendationTab(context, recState, historyState),
+                  ] else ...[
+                    // Tab 1: Crop History Audit Trail
+                    CropHistoryView(
+                      onGetRecommendation: () {
+                        _tabController.animateTo(0);
+                      },
+                    ),
+                  ],
+                  AppSpacing.gapV32,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCropsHubHeader(int historyCount) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.radiusMd,
+        border: Border.all(color: AppColors.cardBorder, width: 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabButton(
+              index: 0,
+              label: 'Recommendation',
+              icon: Icons.psychology_outlined,
+            ),
+          ),
+          Expanded(
+            child: _buildTabButton(
+              index: 1,
+              label: 'Crop History',
+              icon: Icons.history_rounded,
+              badgeCount: historyCount,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required int index,
+    required String label,
+    required IconData icon,
+    int? badgeCount,
+  }) {
+    final isSelected = _tabController.index == index;
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: InkWell(
+        onTap: () {
+          _tabController.animateTo(index);
+        },
+        borderRadius: AppRadius.radiusSm,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: AppRadius.radiusSm,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildModelStatusBanner(),
-              AppSpacing.gapV16,
-              _buildPresetRow(),
-              AppSpacing.gapV16,
-              _buildInputForm(),
-              AppSpacing.gapV24,
-              if (_isLoading) ...[
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: CircularProgressIndicator(color: AppColors.primary),
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
+              ),
+              AppSpacing.gapH6,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
                   ),
                 ),
-              ] else if (_errorMessage != null) ...[
-                AppErrorState(
-                  title: 'Recommendation Service Notice',
-                  message:
-                      'The ML service on Render is starting up or temporarily busy. Please retry in a few moments.',
-                  onRetry: _submit,
+              ),
+              if (badgeCount != null && badgeCount > 0) ...[
+                AppSpacing.gapH6,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppColors.sage.withValues(alpha: 0.5),
+                    borderRadius: AppRadius.radiusPill,
+                  ),
+                  child: Text(
+                    badgeCount.toString(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isSelected ? Colors.white : AppColors.primaryDark,
+                    ),
+                  ),
                 ),
-              ] else if (_result != null) ...[
-                _buildResultCard(_result!),
               ],
-              AppSpacing.gapV32,
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRecommendationTab(
+    BuildContext context,
+    CropRecommendationState recState,
+    CropHistoryState historyState,
+  ) {
+    final hasLatest = historyState.latestItem != null;
+    final latest = historyState.latestItem;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ML Production Service Status
+        _buildModelStatusBanner(),
+        AppSpacing.gapV14,
+
+        // Recent Recommendation Banner (Requirement 26)
+        if (hasLatest && latest != null && recState.result == null) ...[
+          _buildRecentRecommendationBanner(context, latest),
+          AppSpacing.gapV14,
+        ],
+
+        // Farm Profile Pre-fill Header (Requirement 3 & 18)
+        _buildFarmProfileStatusBanner(recState),
+        AppSpacing.gapV14,
+
+        // Premium Soil Information Section (Requirement 4 & 5)
+        SoilInformationCard(
+          state: recState,
+          onSaveSoil: ({
+            required double n,
+            required double p,
+            required double k,
+            required double ph,
+            String? soilType,
+            required bool updateProfile,
+          }) {
+            ref.read(cropRecommendationNotifierProvider.notifier).updateSoilInputs(
+                  n: n,
+                  p: p,
+                  k: k,
+                  ph: ph,
+                  soilType: soilType,
+                  updateProfile: updateProfile,
+                );
+          },
+          onNavigateToProfile: () {
+            context.go('/profile');
+          },
+        ),
+        AppSpacing.gapV14,
+
+        // Dynamic Environmental & Climate Conditions Section (Requirement 6)
+        EnvironmentalConditionsCard(
+          state: recState,
+          onSaveWeather: ({
+            required double temperature,
+            required double humidity,
+            required double rainfall,
+          }) {
+            ref.read(cropRecommendationNotifierProvider.notifier).setManualWeather(
+                  temperature: temperature,
+                  humidity: humidity,
+                  rainfall: rainfall,
+                );
+          },
+        ),
+        AppSpacing.gapV16,
+
+        // Review Before Recommending & Primary CTA (Requirement 7 & 8)
+        ReadyRecommendationCard(
+          state: recState,
+          isLoading: recState.recommendationStatus == RecommendationProcessStatus.loading,
+          onGetRecommendation: () {
+            ref.read(cropRecommendationNotifierProvider.notifier).getRecommendation();
+          },
+        ),
+        AppSpacing.gapV20,
+
+        // Recommendation Result or Error Banner
+        if (recState.recommendationStatus == RecommendationProcessStatus.loading) ...[
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          ),
+        ] else if (recState.errorMessage != null) ...[
+          AppErrorState(
+            title: 'Recommendation Unavailable',
+            message: recState.errorMessage!,
+            retryLabel: 'Retry',
+            onRetry: () {
+              ref.read(cropRecommendationNotifierProvider.notifier).getRecommendation();
+            },
+          ),
+        ] else if (recState.result != null) ...[
+          RecommendationResultCard(
+            result: recState.result!,
+            state: recState,
+            onViewHistory: () {
+              _tabController.animateTo(1);
+            },
+            onRunAgain: () {
+              ref.read(cropRecommendationNotifierProvider.notifier).resetResult();
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -159,7 +329,7 @@ class _CropRecommendationPageState extends State<CropRecommendationPage> {
               color: AppColors.successLight,
               borderRadius: AppRadius.radiusSm,
             ),
-            child: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 22),
+            child: const Icon(Icons.cloud_done_outlined, color: AppColors.success, size: 20),
           ),
           AppSpacing.gapH12,
           Expanded(
@@ -174,7 +344,7 @@ class _CropRecommendationPageState extends State<CropRecommendationPage> {
                         'Live Production ML Model',
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primaryDark,
                         ),
@@ -187,7 +357,7 @@ class _CropRecommendationPageState extends State<CropRecommendationPage> {
                 AppSpacing.gapV2,
                 const Text(
                   'Connected to Render Cloud API • Instant Soil Analysis',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -197,327 +367,118 @@ class _CropRecommendationPageState extends State<CropRecommendationPage> {
     );
   }
 
-  Widget _buildPresetRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  Widget _buildFarmProfileStatusBanner(CropRecommendationState recState) {
+    final location = [recState.village, recState.district, recState.state]
+        .where((s) => s.isNotEmpty)
+        .join(', ');
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.radiusMd,
+        border: Border.all(color: AppColors.cardBorder, width: 1),
+      ),
       child: Row(
         children: [
-          const Text(
-            'Quick Presets:',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.sage.withValues(alpha: 0.35),
+              borderRadius: AppRadius.radiusSm,
+            ),
+            child: const Icon(Icons.person_pin_outlined, color: AppColors.primary, size: 20),
           ),
-          AppSpacing.gapH8,
-          ActionChip(
-            label: const Text('Rice / Paddy', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            avatar: const Icon(Icons.grass, size: 16, color: AppColors.primary),
-            backgroundColor: AppColors.surface,
-            onPressed: () => _loadPreset(90, 42, 43, 20.87, 82.0, 6.5, 202.93),
-          ),
-          AppSpacing.gapH8,
-          ActionChip(
-            label: const Text('Cotton', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            avatar: const Icon(Icons.eco, size: 16, color: AppColors.harvestGold),
-            backgroundColor: AppColors.surface,
-            onPressed: () => _loadPreset(120, 40, 20, 25.5, 60.0, 7.2, 85.0),
-          ),
-          AppSpacing.gapH8,
-          ActionChip(
-            label: const Text('Maize', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            avatar: const Icon(Icons.grain, size: 16, color: AppColors.sky),
-            backgroundColor: AppColors.surface,
-            onPressed: () => _loadPreset(80, 40, 40, 24.0, 65.0, 6.8, 110.0),
+          AppSpacing.gapH12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Your farm information is ready.',
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                AppSpacing.gapV2,
+                Text(
+                  location.isNotEmpty
+                      ? '$location • ${recState.landArea > 0 ? "${recState.landArea.toStringAsFixed(1)} ${recState.areaUnit}" : "Land details ready"}'
+                      : 'Saved farm parameters loaded automatically.',
+                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInputForm() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = constraints.maxWidth < 480;
-
-        return AppCard(
-          child: Form(
-            key: _formKey,
+  Widget _buildRecentRecommendationBanner(
+    BuildContext context,
+    dynamic latest,
+  ) {
+    return AppCard(
+      backgroundColor: AppColors.sage.withValues(alpha: 0.2),
+      borderColor: AppColors.primaryLight.withValues(alpha: 0.4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.successLight,
+              borderRadius: AppRadius.radiusSm,
+            ),
+            child: const Icon(Icons.history_rounded, color: AppColors.primary, size: 20),
+          ),
+          AppSpacing.gapH12,
+          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: const [
-                    Icon(Icons.science_outlined, size: 18, color: AppColors.primary),
-                    AppSpacing.gapH8,
-                    Expanded(
-                      child: Text(
-                        'Soil Nutrients (kg/ha)',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'RECENT RECOMMENDATION',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
-                AppSpacing.gapV12,
-                if (isNarrow) ...[
-                  AppTextField(
-                    label: 'Nitrogen (N)',
-                    hintText: 'e.g. 90',
-                    prefixIcon: Icons.eco_outlined,
-                    keyboardType: TextInputType.number,
-                    controller: _nController,
-                  ),
-                  AppSpacing.gapV12,
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Phosphorus (P)',
-                          hintText: 'e.g. 42',
-                          prefixIcon: Icons.science_outlined,
-                          keyboardType: TextInputType.number,
-                          controller: _pController,
-                        ),
-                      ),
-                      AppSpacing.gapH12,
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Potassium (K)',
-                          hintText: 'e.g. 43',
-                          prefixIcon: Icons.grain_outlined,
-                          keyboardType: TextInputType.number,
-                          controller: _kController,
-                        ),
-                      ),
-                    ],
-                  ),
-                ] else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Nitrogen (N)',
-                          hintText: 'e.g. 90',
-                          prefixIcon: Icons.eco_outlined,
-                          keyboardType: TextInputType.number,
-                          controller: _nController,
-                        ),
-                      ),
-                      AppSpacing.gapH12,
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Phosphorus (P)',
-                          hintText: 'e.g. 42',
-                          prefixIcon: Icons.science_outlined,
-                          keyboardType: TextInputType.number,
-                          controller: _pController,
-                        ),
-                      ),
-                      AppSpacing.gapH12,
-                      Expanded(
-                        child: AppTextField(
-                          label: 'Potassium (K)',
-                          hintText: 'e.g. 43',
-                          prefixIcon: Icons.grain_outlined,
-                          keyboardType: TextInputType.number,
-                          controller: _kController,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                AppSpacing.gapV20,
-                Row(
-                  children: const [
-                    Icon(Icons.cloud_outlined, size: 18, color: AppColors.primary),
-                    AppSpacing.gapH8,
-                    Expanded(
-                      child: Text(
-                        'Climate & Environment',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-                      ),
-                    ),
-                  ],
-                ),
-                AppSpacing.gapV12,
                 Row(
                   children: [
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Temperature (°C)',
-                        hintText: 'e.g. 20.87',
-                        prefixIcon: Icons.thermostat_outlined,
-                        keyboardType: TextInputType.number,
-                        controller: _tempController,
+                    Text(
+                      latest.recommendedCrop.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDark,
                       ),
                     ),
-                    AppSpacing.gapH12,
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Humidity (%)',
-                        hintText: 'e.g. 82.0',
-                        prefixIcon: Icons.water_drop_outlined,
-                        keyboardType: TextInputType.number,
-                        controller: _humidityController,
-                      ),
+                    AppSpacing.gapH8,
+                    Text(
+                      '• ${_formatShortDate(latest.createdAt)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                     ),
                   ],
-                ),
-                AppSpacing.gapV12,
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Soil pH (0-14)',
-                        hintText: 'e.g. 6.5',
-                        prefixIcon: Icons.speed_outlined,
-                        keyboardType: TextInputType.number,
-                        controller: _phController,
-                      ),
-                    ),
-                    AppSpacing.gapH12,
-                    Expanded(
-                      child: AppTextField(
-                        label: 'Rainfall (mm)',
-                        hintText: 'e.g. 202.93',
-                        prefixIcon: Icons.grain_outlined,
-                        keyboardType: TextInputType.number,
-                        controller: _rainfallController,
-                      ),
-                    ),
-                  ],
-                ),
-                AppSpacing.gapV24,
-                AppButton(
-                  label: _isLoading ? 'Analyzing Parameters...' : 'Predict Recommended Crop',
-                  leadingIcon: Icons.psychology_outlined,
-                  isLoading: _isLoading,
-                  onPressed: _submit,
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildResultCard(CropRecommendationResult result) {
-    return AppCard(
-      backgroundColor: AppColors.surface,
-      borderColor: AppColors.primaryLight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                    AppSpacing.gapH8,
-                    Flexible(
-                      child: Text(
-                        'Prediction Result',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppBadge(
-                label: result.recommendations.isNotEmpty
-                    ? '${result.recommendations.first.confidence.toStringAsFixed(1)}% Match'
-                    : 'Optimal',
-                variant: BadgeVariant.success,
-              ),
-            ],
-          ),
-          AppSpacing.gapV16,
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.successLight,
-                  borderRadius: AppRadius.radiusMd,
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                ),
-                child: const Icon(Icons.eco, size: 30, color: AppColors.primary),
-              ),
-              AppSpacing.gapH14,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      result.recommendedCrop.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    AppSpacing.gapV2,
-                    const Text(
-                      'Highest yielding crop for your soil and weather profile.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (result.recommendations.isNotEmpty) ...[
-            AppSpacing.gapV20,
-            const Text(
-              'Model Confidence Rankings:',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          TextButton(
+            onPressed: () => CropHistoryDetailSheet.show(context, latest),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: const Size(0, 32),
             ),
-            AppSpacing.gapV8,
-            ...result.recommendations.map(
-              (rec) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          rec.crop.toUpperCase(),
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                        Text(
-                          '${rec.confidence.toStringAsFixed(1)}%',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    AppSpacing.gapV4,
-                    LinearProgressIndicator(
-                      value: (rec.confidence / 100).clamp(0.0, 1.0),
-                      backgroundColor: AppColors.background,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        rec == result.recommendations.first
-                            ? AppColors.primary
-                            : AppColors.textTertiary,
-                      ),
-                      minHeight: 6,
-                      borderRadius: AppRadius.radiusPill,
-                    ),
-                  ],
-                ),
-              ),
+            child: const Text(
+              'View Details',
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.primary),
             ),
-          ],
+          ),
         ],
       ),
     );
