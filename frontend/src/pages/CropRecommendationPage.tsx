@@ -16,12 +16,14 @@ import {
   ChevronRight,
   ShieldCheck,
   RotateCcw,
+  ArrowLeft,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { getCropDisplayName, CROP_DURATIONS, CROP_SEASONS } from '../constants/crops';
 import { CropRecommendationInput, CropRecommendationResult } from '../types';
 import { api, generateSmartRecommendation } from '../services/api';
+import { Translate } from '../services/libreTranslateService';
 
 export const CropRecommendationPage: React.FC = () => {
   const { t } = useTranslation();
@@ -127,9 +129,20 @@ export const CropRecommendationPage: React.FC = () => {
     <div className="crop-rec-page">
       {/* Page Header */}
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('cropRecommendation.title')}</h1>
-          <p className="page-subtitle">{t('cropRecommendation.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('cropRecommendation.title')}</h1>
+            <p className="page-subtitle">{t('cropRecommendation.subtitle')}</p>
+          </div>
         </div>
         <Link to="/crop-history" className="btn-secondary header-action-btn">
           <History size={18} />
@@ -359,7 +372,9 @@ export const CropRecommendationPage: React.FC = () => {
               {/* Rationale in Active Language */}
               <div className="rec-rationale-box">
                 <h4>{t('cropRecommendation.whyRecommended')}</h4>
-                <p>{result.reason}</p>
+                <p>
+                  <Translate text={result.reason} targetLang={currentLanguage} />
+                </p>
               </div>
 
               {/* Meta Stats Row */}
@@ -425,7 +440,9 @@ export const CropRecommendationPage: React.FC = () => {
                 </div>
                 <div className="econ-item highlight">
                   <span className="econ-label">{t('cropRecommendation.profitPotential')}</span>
-                  <span className="econ-val">{result.economics.profit_potential}</span>
+                  <span className="econ-val">
+                    <Translate text={result.economics.profit_potential} targetLang={currentLanguage} />
+                  </span>
                 </div>
               </div>
             </div>
@@ -455,7 +472,8 @@ export const CropRecommendationPage: React.FC = () => {
                 </div>
               </div>
               <p className="fert-schedule-text">
-                <strong>Application Schedule:</strong> {result.fertilizer_recommendation.schedule}
+                <strong>Application Schedule:</strong>{' '}
+                <Translate text={result.fertilizer_recommendation.schedule} targetLang={currentLanguage} />
               </p>
             </div>
 
@@ -465,10 +483,14 @@ export const CropRecommendationPage: React.FC = () => {
                 <AlertTriangle size={20} className="text-amber" />
                 <h3>{t('cropRecommendation.irrigationTitle')}</h3>
               </div>
-              <p className="irrigation-text">{result.irrigation_guideline}</p>
+              <p className="irrigation-text">
+                <Translate text={result.irrigation_guideline} targetLang={currentLanguage} />
+              </p>
               <ul className="risk-factors-list">
                 {result.risk_factors.map((risk, idx) => (
-                  <li key={idx}>{risk}</li>
+                  <li key={idx}>
+                    <Translate text={risk} targetLang={currentLanguage} />
+                  </li>
                 ))}
               </ul>
             </div>

@@ -8,7 +8,7 @@ import '../../../../core/localization/locale_provider.dart';
 import '../../../authentication/domain/models/farmer_profile_model.dart';
 import '../../../authentication/domain/models/user_model.dart';
 
-/// Personalized farmer greeting header with dynamic profile status and incomplete warning.
+/// Clean, minimal personalized farmer greeting header.
 class DashboardHeader extends ConsumerWidget {
   final UserModel? user;
   final FarmerProfile? profile;
@@ -21,17 +21,9 @@ class DashboardHeader extends ConsumerWidget {
     required this.isProfileComplete,
   });
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   String _getFarmerName() {
     if (user != null && user!.fullName.trim().isNotEmpty) {
-      final first = user!.fullName.trim().split(' ').first;
-      return first;
+      return user!.fullName.trim().split(' ').first;
     }
     return 'Farmer';
   }
@@ -42,11 +34,11 @@ class DashboardHeader extends ConsumerWidget {
       final area = profile!.farmDetails.landArea;
       final unit = profile!.farmDetails.areaUnit;
       if (area > 0) {
-        return '${loc.district} District • $area $unit';
+        return '${loc.district} • $area $unit';
       }
       return '${loc.district}, ${loc.state}';
     }
-    return 'Kurnool District • Kharif Season 2026';
+    return 'Kurnool • 5.2 Acres';
   }
 
   @override
@@ -59,31 +51,30 @@ class DashboardHeader extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Top Row: Greeting & Quick Profile Access
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Farmer Avatar (Accessible touch target to /profile)
+            // Farmer Avatar
             GestureDetector(
               onTap: () => context.go('/profile'),
               child: Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.sage.withValues(alpha: 0.6),
+                  color: AppColors.sage.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.cardBorder, width: 1.5),
+                  border: Border.all(color: AppColors.cardBorder, width: 1.2),
                 ),
                 child: const Icon(
-                  Icons.person,
+                  Icons.person_rounded,
                   color: AppColors.primaryDark,
-                  size: 26,
+                  size: 24,
                 ),
               ),
             ),
             AppSpacing.gapH12,
 
-            // Greeting + Context
+            // Greeting + Location
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,31 +84,43 @@ class DashboardHeader extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
                       color: AppColors.textPrimary,
                     ),
                   ),
                   AppSpacing.gapV2,
-                  Text(
-                    locationText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 13,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          locationText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
             AppSpacing.gapH8,
 
-            // Active Farm Season Indicator (Replaces duplicate profile button)
+            // Season Badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: AppRadius.radiusPill,
@@ -127,14 +130,14 @@ class DashboardHeader extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 7,
-                    height: 7,
+                    width: 6,
+                    height: 6,
                     decoration: const BoxDecoration(
                       color: AppColors.success,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 5),
                   const Text(
                     'Kharif 2026',
                     style: TextStyle(
@@ -149,62 +152,40 @@ class DashboardHeader extends ConsumerWidget {
           ],
         ),
 
-        // Incomplete Profile Banner (Only shown if farmer profile needs completion)
         if (!isProfileComplete) ...[
-          AppSpacing.gapV14,
+          AppSpacing.gapV12,
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1), // Warm amber background
+              color: const Color(0xFFFFF8E1),
               borderRadius: AppRadius.radiusMd,
               border: Border.all(color: const Color(0xFFFFD54F), width: 1),
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Icon(
                   Icons.edit_note_rounded,
                   color: Color(0xFFF57F17),
-                  size: 26,
+                  size: 22,
                 ),
-                AppSpacing.gapH12,
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Complete your farm profile',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF3E2723),
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Add land area & soil details for laboratory-grade advice.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF5D4037),
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
+                AppSpacing.gapH10,
+                const Expanded(
+                  child: Text(
+                    'Complete farm details for precision agronomy.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF5D4037),
+                    ),
                   ),
                 ),
-                AppSpacing.gapH8,
-                ElevatedButton(
+                TextButton(
                   onPressed: () => context.go('/profile-setup'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE65100),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: const Size(0, 34),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.radiusSm,
-                    ),
+                    foregroundColor: const Color(0xFFE65100),
                   ),
                   child: const Text(
                     'Setup',

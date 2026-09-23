@@ -2,310 +2,334 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../shared/illustrations/agri_illustrations.dart';
-import '../../../shared/widgets/app_badge.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/farmer_components.dart';
 
-/// Mobile-first Government Schemes & Subsidies screen designed for farmer accessibility.
-class SchemesScreen extends StatefulWidget {
-  const SchemesScreen({super.key});
+class _SchemeItem {
+  final String title;
+  final String category;
+  final String benefit;
+  final String eligibility;
+  final String deadline;
+  final String status;
 
-  @override
-  State<SchemesScreen> createState() => _SchemesScreenState();
+  const _SchemeItem({
+    required this.title,
+    required this.category,
+    required this.benefit,
+    required this.eligibility,
+    required this.deadline,
+    required this.status,
+  });
 }
 
-class _SchemesScreenState extends State<SchemesScreen> {
-  int _selectedCategory = 0;
-  final List<String> _categories = ['All Schemes', 'Direct Cash', 'Insurance', 'Irrigation'];
+const List<_SchemeItem> _schemes = [
+  _SchemeItem(
+    title: 'PM-KISAN Samman Nidhi',
+    category: 'Direct Income Support',
+    benefit: '₹6,000 / year in 3 direct bank transfers of ₹2,000 each',
+    eligibility: 'All landholding farmer families with cultivable land',
+    deadline: 'Ongoing • Next installment in October',
+    status: 'Eligible',
+  ),
+  _SchemeItem(
+    title: 'Pradhan Mantri Fasal Bima Yojana (PMFBY)',
+    category: 'Crop Insurance',
+    benefit: 'Comprehensive loss cover for Kharif cotton & foodgrains at 2% premium',
+    eligibility: 'Farmers cultivating notified crops in notified areas',
+    deadline: 'July 31 for Kharif season',
+    status: 'Enrolled',
+  ),
+  _SchemeItem(
+    title: 'Per Drop More Crop (Drip & Sprinkler)',
+    category: 'Irrigation Subsidy',
+    benefit: '55% subsidy for small & marginal farmers on drip irrigation sets',
+    eligibility: 'Farmers with borewell/canal water source and land title',
+    deadline: 'Open year-round at District Agri Office',
+    status: 'Eligible',
+  ),
+  _SchemeItem(
+    title: 'Kisan Credit Card (KCC) Low-Interest Loan',
+    category: 'Credit Facility',
+    benefit: 'Short-term credit at 4% effective interest rate with prompt repayment',
+    eligibility: 'All farmers, tenant farmers, and oral lessees',
+    deadline: 'Apply at any rural bank branch',
+    status: 'Eligible',
+  ),
+];
 
-  final List<_SchemeItem> _allSchemes = const [
-    _SchemeItem(
-      title: 'PM-KISAN Samman Nidhi',
-      benefit: '₹6,000 / year in 3 installments',
-      eligibility: 'All landholding farmer families across India',
-      badge: 'DIRECT BENEFIT',
-      badgeColor: AppColors.primary,
-      icon: Icons.currency_rupee,
-      categoryIndex: 1,
-    ),
-    _SchemeItem(
-      title: 'PM Fasal Bima Yojana (PMFBY)',
-      benefit: 'Comprehensive crop loss cover (1.5% premium)',
-      eligibility: 'Food crops, oilseeds, and annual commercial crops',
-      badge: 'INSURANCE',
-      badgeColor: Color(0xFF0277BD),
-      icon: Icons.shield_outlined,
-      categoryIndex: 2,
-    ),
-    _SchemeItem(
-      title: 'PM Krishi Sinchayee Yojana',
-      benefit: 'Up to 55% subsidy on drip & sprinkler systems',
-      eligibility: 'Farmers having cultivable land with water source',
-      badge: 'SUBSIDY',
-      badgeColor: Color(0xFFC2185B),
-      icon: Icons.water_drop_outlined,
-      categoryIndex: 3,
-    ),
-    _SchemeItem(
-      title: 'Kisan Credit Card (KCC)',
-      benefit: 'Concessional crop loans at 4% effective interest',
-      eligibility: 'Owner cultivators, tenant farmers, and SHGs',
-      badge: 'CREDIT',
-      badgeColor: Color(0xFF6A1B9A),
-      icon: Icons.credit_card_outlined,
-      categoryIndex: 1,
-    ),
-  ];
+/// Farmer-first Government Schemes and Subsidies screen.
+/// Implements "See → Understand → Act":
+/// 1. What is happening? (Subsidies available for your farm)
+/// 2. What does it mean for my farm? (Exact financial benefit)
+/// 3. What should I do? (Clear 1-tap claim steps and Helpline)
+class SchemesScreen extends StatelessWidget {
+  const SchemesScreen({super.key});
 
-  void _showSchemeDetails(_SchemeItem scheme) {
+  void _showSchemeDetails(BuildContext context, _SchemeItem item) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(scheme.icon, color: scheme.badgeColor, size: 24),
-                AppSpacing.gapH10,
-                Expanded(
-                  child: Text(
-                    scheme.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBorder,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ],
-            ),
-            AppSpacing.gapV12,
-            Text(
-              'Benefit: ${scheme.benefit}',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary),
-            ),
-            AppSpacing.gapV8,
-            Text(
-              'Eligibility: ${scheme.eligibility}',
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-            AppSpacing.gapV16,
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: AppRadius.radiusMd,
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.phone, size: 18, color: AppColors.primary),
-                  AppSpacing.gapH8,
-                  Expanded(
-                    child: Text(
-                      'Toll-Free Kisan Call Center: 1800-180-1551 (6 AM - 10 PM)',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
+              AppSpacing.gapV16,
+              Text(
+                item.title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
               ),
-            ),
-            AppSpacing.gapV16,
-          ],
+              AppSpacing.gapV4,
+              Text(
+                item.category,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+              AppSpacing.gapV14,
+              _buildDetailRow('Financial Benefit', item.benefit),
+              AppSpacing.gapV10,
+              _buildDetailRow('Eligibility', item.eligibility),
+              AppSpacing.gapV10,
+              _buildDetailRow('Application Timing', item.deadline),
+              AppSpacing.gapV16,
+              const Text(
+                'Required Documents:',
+                style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '1. Aadhaar Card linked with mobile\n2. Bank passbook with active DBT\n3. Land record (7/12 or RoR / Khasra)',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              ),
+              AppSpacing.gapV20,
+              FarmerPrimaryButton(
+                label: 'Call Kisan Helpline (1800-180-1551)',
+                icon: Icons.phone,
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  static Widget _buildDetailRow(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final schemes = _selectedCategory == 0
-        ? _allSchemes
-        : _allSchemes.where((s) => s.categoryIndex == _selectedCategory).toList();
+    const schemesSummary =
+        'Government agricultural subsidies: You are eligible for PM-KISAN, Crop Insurance, and 55% Drip Irrigation subsidy.';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Hero Summary Card
-              AppCard(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFCE4EC),
-                        borderRadius: AppRadius.radiusMd,
-                      ),
-                      alignment: Alignment.center,
-                      child: const AgriIllustration(
-                        type: AgriIllustrationType.schemes,
-                        size: 42,
-                        primaryColor: Color(0xFFC2185B),
-                        secondaryColor: Color(0xFFFCE4EC),
-                      ),
-                    ),
-                    AppSpacing.gapH14,
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Government Schemes',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Title / Identifier
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Government Schemes & Grants',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -0.3,
                           ),
-                          AppSpacing.gapV2,
-                          Text(
-                            'Subsidies, PM-KISAN, & Crop Insurance',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const AppBadge(label: 'GOV AID', variant: BadgeVariant.neutral),
-                  ],
-                ),
-              ),
-              AppSpacing.gapV14,
-
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: List.generate(
-                    _categories.length,
-                    (index) => Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ChoiceChip(
-                        label: Text(_categories[index]),
-                        selected: _selectedCategory == index,
-                        selectedColor: const Color(0xFFC2185B),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _selectedCategory == index ? Colors.white : AppColors.textPrimary,
                         ),
-                        backgroundColor: AppColors.surface,
-                        onSelected: (selected) {
-                          if (selected) setState(() => _selectedCategory = index);
-                        },
                       ),
+                      const SizedBox(width: 8),
+                      const FarmerVoiceButton(textToSpeak: schemesSummary),
+                    ],
+                  ),
+                  AppSpacing.gapV2,
+                  const Text(
+                    'Central & State agriculture subsidies matched for your landholding',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
                     ),
                   ),
-                ),
-              ),
-              AppSpacing.gapV14,
+                  AppSpacing.gapV16,
 
-              // Scheme Cards
-              for (final scheme in schemes) ...[
-                _buildSchemeCard(scheme),
-                AppSpacing.gapV10,
-              ],
-            ],
+                  // Kisan Call Center Banner
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: AppRadius.radiusMd,
+                      border: Border.all(color: const Color(0xFFA5D6A7)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.headset_mic_rounded, color: AppColors.primaryDark, size: 24),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Free Agronomist & Scheme Assistance',
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                              Text(
+                                'Call Toll-Free 1800-180-1551 (6:00 AM - 10:00 PM)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapV16,
+
+                  // Scheme Cards List
+                  const FarmerSectionHeader(title: 'Recommended Subsidies'),
+                  AppSpacing.gapV10,
+                  ..._schemes.map((item) => _buildSchemeCard(context, item)),
+                  AppSpacing.gapV24,
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildSchemeCard(_SchemeItem scheme) {
-    return AppCard(
-      onTap: () => _showSchemeDetails(scheme),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: scheme.badgeColor.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.radiusSm,
-                ),
-                child: Icon(scheme.icon, size: 20, color: scheme.badgeColor),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: scheme.badgeColor.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.radiusPill,
-                ),
-                child: Text(
-                  scheme.badge,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: scheme.badgeColor,
+  Widget _buildSchemeCard(BuildContext context, _SchemeItem item) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        onTap: () => _showSchemeDetails(context, item),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: AppRadius.radiusPill,
+                    border: Border.all(color: const Color(0xFFA5D6A7)),
+                  ),
+                  child: Text(
+                    item.status,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            AppSpacing.gapV6,
+            Text(
+              item.benefit,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryDark,
               ),
-            ],
-          ),
-          AppSpacing.gapV10,
-          Text(
-            scheme.title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
             ),
-          ),
-          AppSpacing.gapV4,
-          Text(
-            scheme.benefit,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+            AppSpacing.gapV8,
+            Row(
+              children: [
+                const Icon(Icons.schedule, size: 13, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    item.deadline,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textTertiary),
+              ],
             ),
-          ),
-          AppSpacing.gapV2,
-          Text(
-            scheme.eligibility,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              height: 1.35,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-class _SchemeItem {
-  final String title;
-  final String benefit;
-  final String eligibility;
-  final String badge;
-  final Color badgeColor;
-  final IconData icon;
-  final int categoryIndex;
-
-  const _SchemeItem({
-    required this.title,
-    required this.benefit,
-    required this.eligibility,
-    required this.badge,
-    required this.badgeColor,
-    required this.icon,
-    required this.categoryIndex,
-  });
 }

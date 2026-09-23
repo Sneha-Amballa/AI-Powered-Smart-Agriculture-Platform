@@ -1,9 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/services/location_service.dart';
 import '../../../shared/layouts/app_scaffold.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -27,11 +32,26 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   final _formKeyStep2 = GlobalKey<FormState>();
   final _formKeyStep3 = GlobalKey<FormState>();
 
-  // Step 1: Location Controllers
+  // Step 1: Location & GPS Controllers
   String _selectedState = 'Andhra Pradesh';
   final _districtController = TextEditingController();
   final _villageController = TextEditingController();
   final _pincodeController = TextEditingController();
+
+  double? _latitude;
+  double? _longitude;
+  bool _isDetectingLocation = false;
+  bool _gpsGranted = false;
+  bool _locationDenied = false;
+  bool _permanentlyDenied = false;
+  String? _locationStatusMessage;
+
+  // Manual geocoding fallback
+  final _manualSearchController = TextEditingController();
+  bool _isSearchingLocation = false;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _showManualSearch = false;
+
 
   // Step 2: Farm Info Controllers
   final _landAreaController = TextEditingController();
@@ -109,11 +129,144 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     _kController.dispose();
     _phController.dispose();
     _experienceController.dispose();
+    _manualSearchController.dispose();
     super.dispose();
+  }
+
+  String get _backendBaseUrl {
+    if (kIsWeb) return 'http://127.0.0.1:8000/api/v1';
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:8000/api/v1';
+    } catch (_) {}
+    return 'http://127.0.0.1:8000/api/v1';
+  }
+
+  Future<void> _requestGpsLocation() async {
+    setState(() {
+      _isDetectingLocation = true;
+      _locationDenied = false;
+      _permanentlyDenied = false;
+      _locationStatusMessage = 'Requesting farm location permission...';
+    });
+
+    final locationService = ref.read(locationServiceProvider);
+    final result = await locationService.requestPosition();
+
+    if (!mounted) return;
+
+    if (result.isSuccess) {
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        _gpsGranted = true;
+        _locationDenied = false;
+        _isDetectingLocation = false;
+        _locationStatusMessage = 'Farm GPS Location Detected ✓';
+      });
+
+      // Reverse geocode to auto-fill district and state
+      await _reverseGeocode(result.latitude!, result.longitude!);
+    } else {
+      setState(() {
+        _isDetectingLocation = false;
+        _gpsGranted = false;
+        _locationDenied = true;
+        _permanentlyDenied =
+            result.status == LocationFetchStatus.permissionPermanentlyDenied;
+        _locationStatusMessage =
+            result.errorMessage ?? 'Location permission is needed for accurate local weather.';
+      });
+    }
+  }
+
+  Future<void> _reverseGeocode(double lat, double lon) async {
+    try {
+      final uri = Uri.parse('$_backendBaseUrl/weather/reverse-geocode?lat=$lat&lon=$lon');
+      final res = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final st = data['state'] as String?;
+        final dist = data['district'] as String?;
+        final vill = data['village'] as String?;
+
+        if (st != null && st.isNotEmpty) {
+          final match = _indianStates.firstWhere(
+            (s) => s.toLowerCase() == st.toLowerCase() || s.toLowerCase().contains(st.toLowerCase()),
+            orElse: () => _selectedState,
+          );
+          _selectedState = match;
+        }
+        if (dist != null && dist.isNotEmpty) {
+          _districtController.text = dist;
+        }
+        if (vill != null && vill.isNotEmpty) {
+          _villageController.text = vill;
+        } else if (_villageController.text.isEmpty && dist != null) {
+          _villageController.text = '$dist Village';
+        }
+        setState(() {});
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _searchLocation(String query) async {
+    if (query.trim().length < 2) return;
+    setState(() => _isSearchingLocation = true);
+    try {
+      final uri = Uri.parse('$_backendBaseUrl/weather/geocode?query=${Uri.encodeComponent(query.trim())}');
+      final res = await http.get(uri).timeout(const Duration(seconds: 6));
+      if (res.statusCode == 200 && mounted) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final list = (data['results'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        setState(() {
+          _searchResults = list;
+          _isSearchingLocation = false;
+        });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isSearchingLocation = false);
+  }
+
+  void _selectSearchResult(Map<String, dynamic> item) {
+    setState(() {
+      _latitude = (item['latitude'] as num?)?.toDouble();
+      _longitude = (item['longitude'] as num?)?.toDouble();
+      _gpsGranted = true;
+      _locationDenied = false;
+      _locationStatusMessage = 'Location Selected: ${item['name']}';
+      _searchResults = [];
+      _showManualSearch = false;
+
+      final dist = item['district'] as String? ?? item['name'] as String? ?? '';
+      final st = item['state'] as String? ?? '';
+      _districtController.text = dist;
+      if (_villageController.text.isEmpty) {
+        _villageController.text = item['name'] as String? ?? dist;
+      }
+      if (st.isNotEmpty) {
+        final match = _indianStates.firstWhere(
+          (s) => s.toLowerCase() == st.toLowerCase() || s.toLowerCase().contains(st.toLowerCase()),
+          orElse: () => _selectedState,
+        );
+        _selectedState = match;
+      }
+    });
   }
 
   void _nextStep() {
     if (_currentStep == 0) {
+      if (_gpsGranted && _latitude != null) {
+        // If GPS is granted, allow proceeding immediately, auto-populating if empty
+        if (_districtController.text.trim().isEmpty) {
+          _districtController.text = 'Farm Region';
+        }
+        if (_villageController.text.trim().isEmpty) {
+          _villageController.text = 'Farm Locality';
+        }
+        setState(() => _currentStep = 1);
+        return;
+      }
       if (!_formKeyStep1.currentState!.validate()) return;
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
@@ -156,14 +309,20 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Future<void> _handleComplete() async {
     if (!_formKeyStep3.currentState!.validate()) return;
 
+    final dist = _districtController.text.trim();
+    final vill = _villageController.text.trim();
+
     final location = FarmerLocation(
       state: _selectedState,
-      district: _districtController.text.trim(),
-      village: _villageController.text.trim(),
+      district: dist.isNotEmpty ? dist : 'Agricultural District',
+      village: vill.isNotEmpty ? vill : 'Farm Locality',
       pincode: _pincodeController.text.trim().isNotEmpty
           ? _pincodeController.text.trim()
           : null,
+      latitude: _latitude,
+      longitude: _longitude,
     );
+
 
     final landArea = double.tryParse(_landAreaController.text.trim()) ?? 1.0;
     final expYears = int.tryParse(_experienceController.text.trim());
@@ -394,7 +553,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 AppSpacing.gapH8,
                 Expanded(
                   child: Text(
-                    'Step 1: Farm Location',
+                    'Step 1: Farm Location & Weather',
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -402,10 +561,267 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
             ),
             AppSpacing.gapV4,
             const Text(
-              'No GPS permission requested. Enter your agricultural district manually.',
+              'We use your location to provide local weather and farm advice.',
               style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
+            AppSpacing.gapV16,
+
+            // 1. PRIMARY GPS CARD
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: _gpsGranted
+                    ? AppColors.successLight
+                    : AppColors.primaryLight.withValues(alpha: 0.12),
+                borderRadius: AppRadius.radiusMd,
+                border: Border.all(
+                  color: _gpsGranted
+                      ? AppColors.success.withValues(alpha: 0.4)
+                      : AppColors.cardBorder,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _gpsGranted
+                              ? AppColors.success
+                              : AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _gpsGranted
+                              ? Icons.check
+                              : Icons.my_location_rounded,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                      ),
+                      AppSpacing.gapH12,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _gpsGranted
+                                  ? 'Farm GPS Location Connected ✓'
+                                  : 'Allow KisanAI to use your farm location?',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _gpsGranted
+                                  ? 'Weather and agronomic advisories will automatically sync with your farm.'
+                                  : 'We use your location to provide local weather and farm advice.',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (!_gpsGranted) ...[
+                    AppSpacing.gapV14,
+                    AppButton(
+                      label: _isDetectingLocation
+                          ? 'Detecting Farm Location...'
+                          : 'Allow Farm Location (Use GPS)',
+                      leadingIcon: Icons.gps_fixed,
+                      isLoading: _isDetectingLocation,
+                      onPressed: _requestGpsLocation,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // 2. LOCATION PERMISSION DENIED WARNING (FALLBACK)
+            if (_locationDenied && !_gpsGranted) ...[
+              AppSpacing.gapV12,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.errorLight,
+                  borderRadius: AppRadius.radiusMd,
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 18, color: AppColors.error),
+                        AppSpacing.gapH8,
+                        Expanded(
+                          child: Text(
+                            'Location permission is needed for accurate local weather.',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    AppSpacing.gapV10,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppOutlinedButton(
+                            label: _permanentlyDenied ? 'Open Settings' : 'Allow Location',
+                            onPressed: _permanentlyDenied
+                                ? () => ref.read(locationServiceProvider).openAppSettings()
+                                : _requestGpsLocation,
+                          ),
+                        ),
+                        AppSpacing.gapH8,
+                        Expanded(
+                          child: AppOutlinedButton(
+                            label: 'Search Place',
+                            onPressed: () => setState(() => _showManualSearch = !_showManualSearch),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // 3. MANUAL GEOCODE SEARCH FALLBACK
+            if (_showManualSearch || (!_gpsGranted && _locationDenied)) ...[
+              AppSpacing.gapV16,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.radiusMd,
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Search Farm Location Manually',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Enter your village, mandal, or district to find coordinates.',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                    ),
+                    AppSpacing.gapV10,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppTextField(
+                            label: 'Village / District Name',
+                            hintText: 'e.g. Kurnool, Solapur, Alur',
+                            controller: _manualSearchController,
+                            onSubmitted: _searchLocation,
+                          ),
+                        ),
+                        AppSpacing.gapH8,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20),
+                          child: IconButton.filled(
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.radiusSm,
+                              ),
+                            ),
+                            icon: _isSearchingLocation
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.search, size: 20),
+                            onPressed: () => _searchLocation(_manualSearchController.text),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_searchResults.isNotEmpty) ...[
+                      AppSpacing.gapV10,
+                      const Text(
+                        'Select Matching Location:',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      AppSpacing.gapV6,
+                      ...List.generate(_searchResults.length, (idx) {
+                        final item = _searchResults[idx];
+                        final name = item['name'] ?? '';
+                        final district = item['district'] ?? '';
+                        final state = item['state'] ?? '';
+                        final subtitle = [district, state].where((s) => s.isNotEmpty).join(', ');
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: AppRadius.radiusSm,
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: ListTile(
+                            dense: true,
+                            leading: const Icon(Icons.place, color: AppColors.primary, size: 20),
+                            title: Text(
+                              name,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                            ),
+                            subtitle: subtitle.isNotEmpty
+                                ? Text(subtitle, style: const TextStyle(fontSize: 11))
+                                : null,
+                            trailing: const Icon(Icons.chevron_right, size: 18),
+                            onTap: () => _selectSearchResult(item),
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
             AppSpacing.gapV20,
+            const Text(
+              'Regional Farm Details',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            AppSpacing.gapV10,
+
+            // 4. REGIONAL FORM FIELDS
             AppDropdown<String>(
               label: 'State / Union Territory *',
               value: _selectedState,
@@ -423,8 +839,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               hintText: 'e.g. Kurnool, Guntur, Solapur',
               prefixIcon: Icons.apartment_outlined,
               controller: _districtController,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'District is required' : null,
+              validator: (v) {
+                if (_gpsGranted && _latitude != null) return null;
+                return (v == null || v.trim().isEmpty) ? 'District is required' : null;
+              },
             ),
             AppSpacing.gapV16,
             AppTextField(
@@ -432,8 +850,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               hintText: 'e.g. Nandyal Mandal, Alur',
               prefixIcon: Icons.holiday_village_outlined,
               controller: _villageController,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Village/Mandal is required' : null,
+              validator: (v) {
+                if (_gpsGranted && _latitude != null) return null;
+                return (v == null || v.trim().isEmpty) ? 'Village/Mandal is required' : null;
+              },
             ),
             AppSpacing.gapV16,
             AppTextField(
@@ -456,6 +876,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       ),
     );
   }
+
 
   // STEP 2: FARM & SOIL INFO
   Widget _buildStep2FarmAndSoil() {

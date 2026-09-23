@@ -73,31 +73,46 @@ class AuthRepository {
     return user;
   }
 
-  /// Sign in with mobile number and password.
+  /// Sign in with identifier (email, username, or mobile number) and password.
   Future<({UserModel user, FarmerProfile? profile})> login({
-    required String phoneNumber,
+    String? identifier,
+    String? phoneNumber,
     required String password,
   }) async {
-    final cleanPhone = cleanPhoneNumber(phoneNumber);
-    if (!isValidIndianMobile(cleanPhone)) {
-      throw const FormatException('Please enter a valid 10-digit Indian mobile number');
+    final rawInput = (identifier ?? phoneNumber ?? '').trim();
+    if (rawInput.isEmpty) {
+      throw const FormatException('Please enter your email or username');
     }
     if (password.isEmpty) {
       throw const FormatException('Please enter your account password');
     }
 
-    // 1. Look up persistent account for this phone number
-    final existingAccount = await _storage.getAccountByPhone(cleanPhone);
+    final lowerInput = rawInput.toLowerCase();
+    final cleanPhone = cleanPhoneNumber(rawInput);
+    final isPhone = isValidIndianMobile(cleanPhone);
+
+    // 1. Look up existing persistent account by identifier or phone
+    final existingAccount = await _storage.getAccountByIdentifier(rawInput) ??
+        (isPhone ? await _storage.getAccountByPhone(cleanPhone) : null);
+
     if (existingAccount != null) {
-      // Verify credentials
-      final isPasswordValid = await _storage.verifyPassword(cleanPhone, password);
+      // Verify credentials against stored credential hash
+      final isPasswordValid = await _storage.verifyPassword(
+            existingAccount.phoneNumber.isNotEmpty ? existingAccount.phoneNumber : rawInput,
+            password,
+          ) ||
+          await _storage.verifyPassword(rawInput, password);
+
       if (!isPasswordValid) {
         throw const FormatException('Incorrect password. Please verify and try again.');
       }
 
       // Retrieve persistent farmer profile associated with this account
-      final existingProfile = await _storage.getProfileForPhone(cleanPhone);
-      final token = 'kisan_sess_${base64Url.encode(utf8.encode('${existingAccount.id}:$cleanPhone'))}';
+      final existingProfile = existingAccount.phoneNumber.isNotEmpty
+          ? await _storage.getProfileForPhone(existingAccount.phoneNumber)
+          : await _storage.getProfile();
+
+      final token = 'kisan_sess_${base64Url.encode(utf8.encode('${existingAccount.id}:${existingAccount.phoneNumber}'))}';
 
       // Restore active session
       await _storage.saveUser(existingAccount);
@@ -112,12 +127,24 @@ class AuthRepository {
       return (user: existingAccount, profile: existingProfile);
     }
 
-    // 2. Demo account prefilled fallback (e.g. 9876543210)
-    if (cleanPhone == '9876543210') {
+    // 2. Demo account credentials check:
+    // Supported demo identifiers: 9876543210, farmer, demo, admin, farmer@kisan.ai, demo@kisan.ai
+    final isDemoIdentifier = cleanPhone == '9876543210' ||
+        lowerInput == 'farmer' ||
+        lowerInput == 'demo' ||
+        lowerInput == 'admin' ||
+        lowerInput == 'farmer@kisan.ai' ||
+        lowerInput == 'demo@kisan.ai';
+
+    if (isDemoIdentifier) {
+      if (password != 'kisan123' && password != 'admin' && password != 'password123') {
+        throw const FormatException('Incorrect password. For demo account, use: kisan123');
+      }
       const demoUser = UserModel(
         id: 'farmer_sample_3210',
         fullName: 'Rajesh Sharma',
         phoneNumber: '9876543210',
+        email: 'farmer@kisan.ai',
       );
       const demoProfile = FarmerProfile(
         userId: 'farmer_sample_3210',
@@ -126,7 +153,10 @@ class AuthRepository {
           district: 'Kurnool',
           village: 'Nandyal',
           pincode: '518501',
+          latitude: 15.8281,
+          longitude: 78.0373,
         ),
+
         farmDetails: FarmDetails(
           landArea: 5.2,
           areaUnit: 'Acres',
@@ -141,7 +171,7 @@ class AuthRepository {
         ),
       );
 
-      await _storage.saveRegisteredAccount(user: demoUser, password: password);
+      await _storage.saveRegisteredAccount(user: demoUser, password: 'kisan123');
       await _storage.saveProfileForPhone('9876543210', demoProfile);
       await _storage.saveUser(demoUser);
       await _storage.saveToken('kisan_sess_demo_3210');
@@ -150,21 +180,8 @@ class AuthRepository {
       return (user: demoUser, profile: demoProfile);
     }
 
-    // 3. Fallback for new farmer logging in directly in offline/demo environment
-    final sampleUserId = 'farmer_${cleanPhone.substring(cleanPhone.length - 4)}';
-    final sampleUser = UserModel(
-      id: sampleUserId,
-      fullName: 'Farmer $cleanPhone',
-      phoneNumber: cleanPhone,
-      createdAt: DateTime.now(),
-    );
-
-    final token = 'kisan_sess_${base64Url.encode(utf8.encode('$sampleUserId:$cleanPhone'))}';
-    await _storage.saveRegisteredAccount(user: sampleUser, password: password);
-    await _storage.saveUser(sampleUser);
-    await _storage.saveToken(token);
-
-    return (user: sampleUser, profile: null);
+    // 3. Unrecognized account or invalid credentials:
+    throw const FormatException('Invalid credentials. Please verify your email/username and password.');
   }
 
   /// Save completed or updated farmer profile.

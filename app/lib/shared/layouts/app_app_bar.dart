@@ -44,7 +44,7 @@ class AppAppBar extends StatelessWidget implements PreferredSizeWidget {
                     if (canPop) {
                       context.pop();
                     } else {
-                      context.go('/');
+                      context.go('/dashboard');
                     }
                   },
             )

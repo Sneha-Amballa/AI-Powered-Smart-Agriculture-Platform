@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../shared/widgets/app_badge.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_error_state.dart';
 import 'providers/crop_history_provider.dart';
@@ -217,10 +216,6 @@ class _CropRecommendationPageState extends ConsumerState<CropRecommendationPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ML Production Service Status
-        _buildModelStatusBanner(),
-        AppSpacing.gapV14,
-
         // Recent Recommendation Banner (Requirement 26)
         if (hasLatest && latest != null && recState.result == null) ...[
           _buildRecentRecommendationBanner(context, latest),
@@ -317,63 +312,13 @@ class _CropRecommendationPageState extends ConsumerState<CropRecommendationPage>
     );
   }
 
-  Widget _buildModelStatusBanner() {
-    return AppCard(
-      backgroundColor: AppColors.surface,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.successLight,
-              borderRadius: AppRadius.radiusSm,
-            ),
-            child: const Icon(Icons.cloud_done_outlined, color: AppColors.success, size: 20),
-          ),
-          AppSpacing.gapH12,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Flexible(
-                      child: Text(
-                        'Live Production ML Model',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryDark,
-                        ),
-                      ),
-                    ),
-                    AppSpacing.gapH6,
-                    AppBadge(label: 'ONLINE', variant: BadgeVariant.success),
-                  ],
-                ),
-                AppSpacing.gapV2,
-                const Text(
-                  'Connected to Render Cloud API • Instant Soil Analysis',
-                  style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFarmProfileStatusBanner(CropRecommendationState recState) {
     final location = [recState.village, recState.district, recState.state]
         .where((s) => s.isNotEmpty)
         .join(', ');
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.radiusMd,
@@ -382,22 +327,22 @@ class _CropRecommendationPageState extends ConsumerState<CropRecommendationPage>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: AppColors.sage.withValues(alpha: 0.35),
               borderRadius: AppRadius.radiusSm,
             ),
-            child: const Icon(Icons.person_pin_outlined, color: AppColors.primary, size: 20),
+            child: const Icon(Icons.person_pin_outlined, color: AppColors.primary, size: 18),
           ),
-          AppSpacing.gapH12,
+          AppSpacing.gapH10,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Your farm information is ready.',
+                  'Farm Parameters Loaded',
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),

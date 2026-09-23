@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme/app_colors.dart';
@@ -10,13 +11,17 @@ import 'app_drawer.dart';
 
 /// Responsive shell wrapper that provides BottomNav on mobile and NavigationRail on tablet/desktop,
 /// fully localized with reactive translations for title and navigation destinations.
+/// Integrates PopScope to guarantee that pressing the back button anywhere in any module
+/// returns to the authenticated Home/Dashboard, rather than exiting to public landing/login.
 class MainShell extends ConsumerWidget {
   final Widget child;
 
-  const MainShell({
+  MainShell({
     super.key,
     required this.child,
   });
+
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -49,16 +54,21 @@ class MainShell extends ConsumerWidget {
     final selectedIndex = _calculateSelectedIndex(context);
     final currentPath = GoRouterState.of(context).uri.path;
 
-    final isDashboard = selectedIndex == 0;
+    // Strict check: Only true if exact dashboard path
+    final isDashboard = currentPath == '/dashboard';
     final isProfileScreen = currentPath.startsWith('/profile');
     final shouldShowProfileInAppBar = !isDashboard && !isProfileScreen;
 
+    Widget shellContent;
+
     if (isDesktopOrTablet) {
-      return Scaffold(
+      shellContent = Scaffold(
+        key: _scaffoldKey,
         appBar: AppAppBar(
           title: _getPageTitle(context, ref),
-          showLogo: true,
-          showBackButton: false,
+          showLogo: isDashboard,
+          showBackButton: !isDashboard,
+          onBackPressed: () => context.go('/dashboard'),
           showProfile: shouldShowProfileInAppBar,
         ),
         body: Row(
@@ -105,19 +115,46 @@ class MainShell extends ConsumerWidget {
           ],
         ),
       );
+    } else {
+      // Mobile layout
+      shellContent = Scaffold(
+        key: _scaffoldKey,
+        appBar: AppAppBar(
+          title: _getPageTitle(context, ref),
+          showLogo: isDashboard,
+          showBackButton: !isDashboard,
+          onBackPressed: () => context.go('/dashboard'),
+          showProfile: shouldShowProfileInAppBar,
+        ),
+        drawer: AppDrawer(currentPath: currentPath),
+        body: child,
+        bottomNavigationBar: AppBottomNav(currentIndex: selectedIndex),
+      );
     }
 
-    // Mobile layout
-    return Scaffold(
-      appBar: AppAppBar(
-        title: _getPageTitle(context, ref),
-        showLogo: selectedIndex == 0,
-        showBackButton: selectedIndex != 0,
-        showProfile: shouldShowProfileInAppBar,
-      ),
-      drawer: AppDrawer(currentPath: currentPath),
-      body: child,
-      bottomNavigationBar: AppBottomNav(currentIndex: selectedIndex),
+    // Intercept hardware and gesture back buttons to ensure flow: Module -> Back -> Dashboard
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        // If drawer is currently open, close it first
+        if (_scaffoldKey.currentState?.isDrawerOpen ?? false) {
+          _scaffoldKey.currentState?.closeDrawer();
+          return;
+        }
+
+        // If in any module, pressing Back returns to the authenticated Home/Dashboard
+        if (currentPath != '/dashboard') {
+          context.go('/dashboard');
+          return;
+        }
+
+        // Already at Home/Dashboard root: never navigate back to public landing or login!
+        // SystemNavigator.pop cleanly closes or minimizes the app on mobile.
+        SystemNavigator.pop();
+      },
+      child: shellContent,
     );
   }
 }

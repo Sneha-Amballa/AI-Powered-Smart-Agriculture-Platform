@@ -24,11 +24,13 @@ class Token(BaseModel):
 
 
 class LocationSetup(BaseModel):
-    """Manual location setup (No GPS)."""
+    """Farmer location setup (GPS coordinates or manual fallback)."""
     state: str = Field(..., min_length=2)
     district: str = Field(..., min_length=2)
     village: str = Field(..., min_length=2)
     pincode: Optional[str] = Field(None, max_length=10)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class FarmDetailsSetup(BaseModel):
@@ -79,12 +81,15 @@ class FarmerProfileResponse(BaseModel):
     district: str
     village: str
     pincode: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     farming_experience_years: Optional[int] = None
     farm_details: Optional[FarmDetailsResponse] = None
     created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
 
 
 class UserResponse(BaseModel):

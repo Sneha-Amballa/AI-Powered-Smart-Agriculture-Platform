@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     WEATHER_API_BASE_URL: str = "https://api.openweathermap.org/data/2.5"
     GEMINI_API_KEY: str = ""
 
+    # LibreTranslate (free/open-source translation)
+    LIBRETRANSLATE_URL: str = "https://libretranslate.com"
+    LIBRETRANSLATE_API_KEY: str = ""
+
     # Security & Authentication (JWT)
     SECRET_KEY: str = "smart-agri-dev-secret-key-change-in-production-12345678"
     ALGORITHM: str = "HS256"

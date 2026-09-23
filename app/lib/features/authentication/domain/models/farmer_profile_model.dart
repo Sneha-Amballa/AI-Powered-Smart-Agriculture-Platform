@@ -4,25 +4,35 @@ class FarmerLocation {
   final String district;
   final String village;
   final String? pincode;
+  final double? latitude;
+  final double? longitude;
 
   const FarmerLocation({
     required this.state,
     required this.district,
     required this.village,
     this.pincode,
+    this.latitude,
+    this.longitude,
   });
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   FarmerLocation copyWith({
     String? state,
     String? district,
     String? village,
     String? pincode,
+    double? latitude,
+    double? longitude,
   }) {
     return FarmerLocation(
       state: state ?? this.state,
       district: district ?? this.district,
       village: village ?? this.village,
       pincode: pincode ?? this.pincode,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 
@@ -32,6 +42,8 @@ class FarmerLocation {
       'district': district,
       'village': village,
       'pincode': pincode,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -41,6 +53,8 @@ class FarmerLocation {
       district: json['district'] as String? ?? '',
       village: json['village'] as String? ?? '',
       pincode: json['pincode'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 
@@ -50,6 +64,7 @@ class FarmerLocation {
     return parts.join(', ');
   }
 }
+
 
 /// Farm land and soil parameters.
 class FarmDetails {
@@ -221,7 +236,10 @@ class FarmerProfile {
               district: json['district'] as String? ?? '',
               village: json['village'] as String? ?? '',
               pincode: json['pincode'] as String?,
+              latitude: (json['latitude'] as num?)?.toDouble(),
+              longitude: (json['longitude'] as num?)?.toDouble(),
             ),
+
       farmDetails: json['farm_details'] != null
           ? FarmDetails.fromJson(json['farm_details'] as Map<String, dynamic>)
           : FarmDetails.fromJson(json),

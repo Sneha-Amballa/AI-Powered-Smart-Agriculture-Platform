@@ -6,6 +6,7 @@ import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { Toast } from './components/common/Toast';
 import { LanguageSelectorModal } from './components/common/LanguageSelectorModal';
+import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 import { LandingPage } from './pages/LandingPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -30,19 +31,94 @@ function App() {
             <Navbar />
             <main className="main-content">
               <Routes>
+                {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/crop-recommendation" element={<CropRecommendationPage />} />
-                <Route path="/crop-history" element={<CropHistoryPage />} />
-                <Route path="/disease-detection" element={<DiseaseDetectionPage />} />
-                <Route path="/weather" element={<WeatherPage />} />
-                <Route path="/market" element={<MarketPage />} />
-                <Route path="/schemes" element={<SchemesPage />} />
-                <Route path="/assistant" element={<AIAssistantPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+
+                {/* Protected Routes: require authenticated session */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/crop-recommendation"
+                  element={
+                    <ProtectedRoute>
+                      <CropRecommendationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/crop-history"
+                  element={
+                    <ProtectedRoute>
+                      <CropHistoryPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/disease-detection"
+                  element={
+                    <ProtectedRoute>
+                      <DiseaseDetectionPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/weather"
+                  element={
+                    <ProtectedRoute>
+                      <WeatherPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/market"
+                  element={
+                    <ProtectedRoute>
+                      <MarketPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/schemes"
+                  element={
+                    <ProtectedRoute>
+                      <SchemesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assistant"
+                  element={
+                    <ProtectedRoute>
+                      <AIAssistantPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Fallback route */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

@@ -348,19 +348,13 @@ void main() {
     // 5. Market Snapshot
     expect(find.textContaining('Market Snapshot'), findsOneWidget);
 
-    // 6. Disease Detection Spotlight (No separate pest card)
-    expect(find.text('Plant Disease Detection'), findsOneWidget);
-    expect(find.text('Take Photo'), findsOneWidget);
-    expect(find.text('Upload Image'), findsOneWidget);
+    // 6. Quick Farm Tools (Clean minimal 4-tool grid)
+    expect(find.text('Quick Farm Tools'), findsOneWidget);
+    expect(find.text('Plant Disease Scan'), findsOneWidget);
+    expect(find.text('Mandi Market Rates'), findsOneWidget);
+    expect(find.text('AI Farm Assistant'), findsOneWidget);
 
-    // 7. Government Schemes
-    expect(find.textContaining('Government Support'), findsOneWidget);
-
-    // 8. AI Assistant Entry
-    expect(find.text('Ask your Agriculture Assistant'), findsOneWidget);
-    expect(find.text('Ask AgriAI'), findsOneWidget);
-
-    // 9. Verify no duplicate profile buttons on dashboard (season indicator present instead)
+    // 7. Verify season indicator present
     expect(find.text('Kharif 2026'), findsOneWidget);
     expect(find.byTooltip('Farmer Profile'), findsNothing);
   });

@@ -116,18 +116,54 @@ export const RegisterPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="auth-form">
             {error && <div className="auth-error-banner">{error}</div>}
 
-            <div className="selected-lang-summary">
-              <Globe size={16} />
-              <span>
-                Language: <strong>{supportedLanguages.find(l => l.code === selectedLang)?.nativeName}</strong>
-              </span>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="btn-text-link"
-              >
-                {t('common.edit')}
-              </button>
+            <div className="selected-lang-summary" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <Globe size={16} className="text-green" />
+                  <span>{t('onboarding.chooseLanguage')}:</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="btn-text-link"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  {t('common.viewAll')}
+                </button>
+              </div>
+
+              {/* 1-Tap Language Switcher Pills */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {supportedLanguages.map((lang) => {
+                  const isSelected = selectedLang === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => handleSelectLanguage(lang.code)}
+                      className={`lang-pill-btn ${isSelected ? 'active' : ''}`}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--card-border)',
+                        background: isSelected ? 'var(--color-primary-light, #e8f5e9)' : 'var(--surface-bg, #fff)',
+                        color: isSelected ? 'var(--color-primary-dark, #1b5e20)' : 'var(--text-primary)',
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{lang.nativeName}</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({lang.badge})</span>
+                      {isSelected && <Check size={14} />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="form-group">

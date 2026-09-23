@@ -6,76 +6,61 @@ import '../../../../app/theme/app_spacing.dart';
 
 class _QuickActionItem {
   final String title;
-  final String subtitle;
+  final String statusLabel;
+  final bool isLive;
   final IconData icon;
   final Color color;
   final Color bgColor;
   final String route;
-  final String? badge;
 
   const _QuickActionItem({
     required this.title,
-    required this.subtitle,
+    required this.statusLabel,
+    required this.isLive,
     required this.icon,
     required this.color,
     required this.bgColor,
     required this.route,
-    this.badge,
   });
 }
 
-/// Coherent quick actions grid adhering to the agricultural design system.
-/// Guaranteed zero emojis, responsive columns, and minimum 56dp touch targets.
+/// Production-grade quick actions grid with concise icon-led cards and status chips.
 class QuickActionsGrid extends StatelessWidget {
   const QuickActionsGrid({super.key});
 
   static const List<_QuickActionItem> _actions = [
     _QuickActionItem(
       title: 'Crop Recommendation',
-      subtitle: 'Live ML Prediction',
+      statusLabel: 'Active',
+      isLive: true,
       icon: Icons.eco_rounded,
       color: AppColors.primary,
       bgColor: Color(0xFFE8F5E9),
       route: '/crop-recommendation',
-      badge: 'LIVE ML',
     ),
     _QuickActionItem(
-      title: 'Disease Detection',
-      subtitle: 'Scan Crop Leaf',
-      icon: Icons.biotech_rounded,
+      title: 'Plant Disease Scan',
+      statusLabel: 'In Progress',
+      isLive: false,
+      icon: Icons.health_and_safety_outlined,
       color: Color(0xFF00796B),
       bgColor: Color(0xFFE0F2F1),
       route: '/disease-detection',
-      badge: 'VISION AI',
     ),
     _QuickActionItem(
-      title: 'Weather & Rain',
-      subtitle: '7-Day Agronomy',
-      icon: Icons.cloud_outlined,
-      color: Color(0xFF0277BD),
-      bgColor: Color(0xFFE1F5FE),
-      route: '/weather',
-    ),
-    _QuickActionItem(
-      title: 'Market Mandi',
-      subtitle: 'Live APMC Rates',
+      title: 'Mandi Market Rates',
+      statusLabel: 'In Progress',
+      isLive: false,
       icon: Icons.storefront_rounded,
       color: Color(0xFF4527A0),
       bgColor: Color(0xFFEDE7F6),
       route: '/market',
     ),
     _QuickActionItem(
-      title: 'Government Schemes',
-      subtitle: 'PM-KISAN & Grants',
-      icon: Icons.account_balance_outlined,
-      color: Color(0xFFC2185B),
-      bgColor: Color(0xFFFCE4EC),
-      route: '/government-schemes',
-    ),
-    _QuickActionItem(
-      title: 'Kisan AI Assistant',
-      subtitle: '24/7 Vernacular Help',
-      icon: Icons.forum_rounded,
+      title: 'AI Farm Assistant',
+      statusLabel: 'In Progress',
+      isLive: false,
+      icon: Icons.forum_outlined,
       color: Color(0xFF1565C0),
       bgColor: Color(0xFFE3F2FD),
       route: '/assistant',
@@ -87,14 +72,14 @@ class QuickActionsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         int crossAxisCount = 2;
-        double childAspectRatio = 1.9;
+        double childAspectRatio = 1.95;
 
-        if (constraints.maxWidth >= 800) {
-          crossAxisCount = 6;
-          childAspectRatio = 1.3;
-        } else if (constraints.maxWidth >= 550) {
-          crossAxisCount = 3;
-          childAspectRatio = 1.6;
+        if (constraints.maxWidth >= 720) {
+          crossAxisCount = 4;
+          childAspectRatio = 1.4;
+        } else if (constraints.maxWidth >= 500) {
+          crossAxisCount = 2;
+          childAspectRatio = 2.2;
         }
 
         return GridView.builder(
@@ -119,13 +104,13 @@ class QuickActionsGrid extends StatelessWidget {
   Widget _buildActionCard(BuildContext context, _QuickActionItem item) {
     return Semantics(
       button: true,
-      label: '${item.title}. ${item.subtitle}',
+      label: '${item.title}. ${item.statusLabel}',
       child: Material(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.radiusMd,
-          side: const BorderSide(color: AppColors.cardBorder, width: 1.1),
+          side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -137,17 +122,17 @@ class QuickActionsGrid extends StatelessWidget {
               children: [
                 // Icon Box
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: item.bgColor,
                     borderRadius: AppRadius.radiusSm,
                   ),
-                  child: Icon(item.icon, size: 22, color: item.color),
+                  child: Icon(item.icon, size: 20, color: item.color),
                 ),
                 AppSpacing.gapH10,
 
-                // Title and subtitle
+                // Title and status
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,16 +148,31 @@ class QuickActionsGrid extends StatelessWidget {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: item.color,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: item.isLive ? AppColors.success : AppColors.textTertiary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              item.statusLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: item.isLive ? AppColors.success : AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

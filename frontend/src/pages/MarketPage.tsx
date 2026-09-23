@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { TrendingUp, Search, ArrowUpRight, ArrowDownRight, Minus, MapPin, Calendar } from 'lucide-react';
+import { TrendingUp, Search, ArrowUpRight, ArrowDownRight, Minus, MapPin, Calendar, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getCropDisplayName } from '../constants/crops';
 import { MandiPriceItem } from '../types';
 
 export const MarketPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -105,9 +107,20 @@ export const MarketPage: React.FC = () => {
   return (
     <div className="market-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('market.title')}</h1>
-          <p className="page-subtitle">{t('market.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('market.title')}</h1>
+            <p className="page-subtitle">{t('market.subtitle')}</p>
+          </div>
         </div>
 
         {/* Search Bar */}

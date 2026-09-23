@@ -71,6 +71,8 @@ class AuthService:
                 district=loc.district,
                 village=loc.village,
                 pincode=loc.pincode,
+                latitude=loc.latitude,
+                longitude=loc.longitude,
                 farming_experience_years=farm.farming_experience_years,
             )
             db.add(profile)
@@ -80,6 +82,10 @@ class AuthService:
             profile.district = loc.district
             profile.village = loc.village
             profile.pincode = loc.pincode
+            if loc.latitude is not None:
+                profile.latitude = loc.latitude
+            if loc.longitude is not None:
+                profile.longitude = loc.longitude
             profile.farming_experience_years = farm.farming_experience_years
 
         # Farm Details

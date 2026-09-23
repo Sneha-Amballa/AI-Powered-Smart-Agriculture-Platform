@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -11,6 +12,7 @@ import {
   Leaf,
   Bug,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -119,6 +121,7 @@ const SAMPLE_DISEASES: Record<string, DiseaseSample> = {
 
 export const DiseaseDetectionPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentLanguage } = useLanguage();
 
   const [selectedSampleKey, setSelectedSampleKey] = useState<string>('tomato_early_blight');
@@ -147,9 +150,20 @@ export const DiseaseDetectionPage: React.FC = () => {
   return (
     <div className="disease-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('diseaseDetection.title')}</h1>
-          <p className="page-subtitle">{t('diseaseDetection.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('diseaseDetection.title')}</h1>
+            <p className="page-subtitle">{t('diseaseDetection.subtitle')}</p>
+          </div>
         </div>
       </div>
 

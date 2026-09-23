@@ -3,15 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_outlined_button.dart';
-import '../../../core/localization/app_language.dart';
-import '../../../core/localization/app_translations.dart';
 import '../../../core/localization/language_selector_sheet.dart';
 import '../../../core/localization/locale_provider.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/farmer_components.dart';
 import '../../authentication/presentation/providers/auth_provider.dart';
 
-/// App settings and preferences screen with accessible touch targets.
+/// Farmer-first Settings Screen.
+/// Clean grouped list sections with simple tappable rows and no long descriptions:
+/// 1. Account
+/// 2. Notifications
+/// 3. Language
+/// 4. Offline Data
+/// 5. Help
+/// 6. Privacy
+/// 7. App Version
+/// 8. Sign Out
+/// 9. Delete Account
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -20,7 +28,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _alertsEnabled = true;
+  bool _notificationsEnabled = true;
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -28,7 +36,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Sign Out'),
         content: const Text(
-          'Are you sure you want to sign out? Your farm profile, crops, and data will remain safely saved on this device for your next login.',
+          'Are you sure you want to sign out? Your farm profile and saved data will remain safely preserved on this device.',
         ),
         actions: [
           TextButton(
@@ -65,11 +73,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: AppColors.error),
             SizedBox(width: 8),
-            Expanded(child: Text('Delete Account Permanently?')),
+            Expanded(child: Text('Delete Account?')),
           ],
         ),
         content: const Text(
-          'This action cannot be undone. All your saved farm profile details, soil test data, crop advisory records, and account credentials will be permanently erased from this device.',
+          'All your saved farm records, soil test results, and credentials will be permanently erased.',
           style: TextStyle(fontSize: 14),
         ),
         actions: [
@@ -88,7 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Your account and all farm records have been permanently deleted.'),
+                    content: Text('Account permanently deleted.'),
                     backgroundColor: AppColors.error,
                   ),
                 );
@@ -102,14 +110,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showLanguageSelector(BuildContext context) {
-    showLanguageSelectorSheet(context, ref);
-  }
-
-  void _clearCache(BuildContext context) {
+  void _clearOfflineCache(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Offline data cache cleared (12.4 MB freed)'),
+        content: Text('Offline data refreshed. 12.4 MB storage cleared.'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -122,255 +126,179 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final farmerName = authState.user?.fullName.isNotEmpty == true
         ? authState.user!.fullName
         : 'Registered Farmer';
-    final phoneNumber = authState.user?.phoneNumber.isNotEmpty == true
-        ? '+91 ${authState.user!.phoneNumber}'
-        : 'Active Session';
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppCard(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isNarrow = constraints.maxWidth < 340;
-                    if (isNarrow) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              const CircleAvatar(
-                                radius: 24,
-                                backgroundColor: AppColors.sage,
-                                child: Icon(Icons.person, size: 28, color: AppColors.primaryDark),
-                              ),
-                              AppSpacing.gapH12,
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      farmerName,
-                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    AppSpacing.gapV2,
-                                    Text(
-                                      phoneNumber,
-                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          AppSpacing.gapV12,
-                          AppOutlinedButton(
-                            label: 'View Profile',
-                            onPressed: () => context.go('/profile'),
-                          ),
-                        ],
-                      );
-                    }
-                    return Row(
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 700),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Account Section
+                  const FarmerSectionHeader(title: 'Account & Profile'),
+                  AppSpacing.gapV10,
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
                       children: [
-                        const CircleAvatar(
-                          radius: 28,
-                          backgroundColor: AppColors.sage,
-                          child: Icon(Icons.person, size: 32, color: AppColors.primaryDark),
+                        FarmerInfoRow(
+                          icon: Icons.person_outline_rounded,
+                          label: 'Account',
+                          value: farmerName,
+                          onTap: () => context.go('/profile'),
                         ),
-                        AppSpacing.gapH16,
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                farmerName,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              AppSpacing.gapV4,
-                              Text(
-                                phoneNumber,
-                                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        AppSpacing.gapH12,
-                        AppOutlinedButton(
-                          label: 'View Profile',
-                          onPressed: () => context.go('/profile'),
+                        FarmerInfoRow(
+                          icon: Icons.translate_outlined,
+                          label: 'Language',
+                          value: activeLang.displayName,
+                          showDivider: false,
+                          onTap: () => showLanguageSelectorSheet(context, ref),
                         ),
                       ],
-                    );
-                  },
-                ),
-              ),
-              AppSpacing.gapV16,
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Preferences',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
-                    AppSpacing.gapV12,
-                    _buildSettingsTile(
-                      Icons.translate_outlined,
-                      ref.tr('settings_app_language'),
-                      activeLang.displayName,
-                      () => _showLanguageSelector(context),
-                    ),
-                    const Divider(height: 1),
-                    _buildSettingsTile(
-                      Icons.notifications_none_outlined,
-                      'Weather & Spraying Alerts',
-                      _alertsEnabled ? 'Enabled (Daily 6 AM & Rain warnings)' : 'Disabled',
-                      () {
-                        setState(() => _alertsEnabled = !_alertsEnabled);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_alertsEnabled ? 'Advisory alerts turned ON' : 'Advisory alerts turned OFF'),
-                            duration: const Duration(seconds: 2),
+                  ),
+                  AppSpacing.gapV16,
+
+                  // 2. Notifications & Offline Data
+                  const FarmerSectionHeader(title: 'Farm Alerts & Data'),
+                  AppSpacing.gapV10,
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => _notificationsEnabled = !_notificationsEnabled);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(_notificationsEnabled
+                                      ? 'Advisory alerts enabled'
+                                      : 'Advisory alerts paused'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.notifications_outlined, size: 20, color: AppColors.primary),
+                                  AppSpacing.gapH12,
+                                  const Expanded(
+                                    child: Text(
+                                      'Notifications',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: _notificationsEnabled,
+                                    activeThumbColor: AppColors.primary,
+                                    activeTrackColor: AppColors.sage,
+                                    onChanged: (val) {
+                                      setState(() => _notificationsEnabled = val);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                        const Divider(height: 1, thickness: 1, color: AppColors.cardBorder),
+                        FarmerInfoRow(
+                          icon: Icons.wifi_off_rounded,
+                          label: 'Offline Data',
+                          value: 'Saved (12.4 MB)',
+                          showDivider: false,
+                          onTap: () => _clearOfflineCache(context),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 1),
-                    _buildSettingsTile(
-                      Icons.storage_outlined,
-                      'Offline Data Cache',
-                      '12.4 MB Used (Tap to clear)',
-                      () => _clearCache(context),
+                  ),
+                  AppSpacing.gapV16,
+
+                  // 3. Help, Privacy & Version
+                  const FarmerSectionHeader(title: 'Support & App'),
+                  AppSpacing.gapV10,
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        FarmerInfoRow(
+                          icon: Icons.support_agent_rounded,
+                          label: 'Help',
+                          value: '1800-180-1551',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Kisan Call Center: Dial 1800-180-1551 (Toll-Free 6 AM - 10 PM)'),
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          },
+                        ),
+                        FarmerInfoRow(
+                          icon: Icons.privacy_tip_outlined,
+                          label: 'Privacy',
+                          value: 'Protected',
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Your farm data is encrypted and private.'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                        ),
+                        const FarmerInfoRow(
+                          icon: Icons.info_outline_rounded,
+                          label: 'App Version',
+                          value: 'v1.0.0 (KisanAI)',
+                          showDivider: false,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  AppSpacing.gapV16,
+
+                  // 4. Session & Actions
+                  const FarmerSectionHeader(title: 'Session'),
+                  AppSpacing.gapV10,
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        FarmerInfoRow(
+                          icon: Icons.logout_rounded,
+                          label: 'Sign Out',
+                          value: 'Safe exit',
+                          onTap: () => _showLogoutDialog(context),
+                        ),
+                        FarmerInfoRow(
+                          icon: Icons.delete_forever_outlined,
+                          label: 'Delete Account',
+                          value: 'Erase all',
+                          showDivider: false,
+                          onTap: () => _showDeleteAccountDialog(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppSpacing.gapV24,
+                ],
               ),
-              AppSpacing.gapV16,
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'About & Legal',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                    AppSpacing.gapV12,
-                    _buildSettingsTile(
-                      Icons.info_outline,
-                      'App Version',
-                      '1.0.0+1 (Precision Agriculture Release)',
-                      null,
-                    ),
-                    const Divider(height: 1),
-                    _buildSettingsTile(
-                      Icons.privacy_tip_outlined,
-                      'Privacy Policy',
-                      'ICAR & Government Advisory Guidelines',
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Platform complies with Indian Digital Agri-Stack Privacy standards'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _buildSettingsTile(
-                      Icons.support_agent_outlined,
-                      'Help & Farmer Support',
-                      'Kisan Toll-Free Helpline: 1800-180-1551',
-                      () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Connecting to Kisan Call Center (1800-180-1551)...'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              AppSpacing.gapV16,
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Account & Session',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                    AppSpacing.gapV12,
-                    _buildSettingsTile(
-                      Icons.logout,
-                      'Sign Out',
-                      'Safely end session; your farm details remain saved',
-                      () => _showLogoutDialog(context),
-                      iconColor: AppColors.primaryDark,
-                      textColor: AppColors.textPrimary,
-                    ),
-                    const Divider(height: 1),
-                    _buildSettingsTile(
-                      Icons.delete_forever_outlined,
-                      'Delete Account',
-                      'Permanently erase your account and all farm records',
-                      () => _showDeleteAccountDialog(context),
-                      iconColor: AppColors.error,
-                      textColor: AppColors.error,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildSettingsTile(
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback? onTap, {
-    Color? iconColor,
-    Color? textColor,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      minLeadingWidth: 32,
-      minVerticalPadding: 12,
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: (iconColor ?? AppColors.primaryDark).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: iconColor ?? AppColors.primaryDark, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: textColor ?? AppColors.textPrimary,
-        ),
-      ),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-      trailing: onTap != null ? const Icon(Icons.chevron_right, size: 20, color: AppColors.textTertiary) : null,
-      onTap: onTap,
-    );
-  }
 }
-

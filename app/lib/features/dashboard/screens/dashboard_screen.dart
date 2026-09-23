@@ -4,25 +4,24 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../authentication/presentation/providers/auth_provider.dart';
 import '../presentation/providers/dashboard_provider.dart';
-import '../presentation/widgets/assistant_entry_card.dart';
 import '../presentation/widgets/crop_recommendation_card.dart';
 import '../presentation/widgets/dashboard_error_banner.dart';
 import '../presentation/widgets/dashboard_header.dart';
 import '../presentation/widgets/dashboard_skeleton.dart';
-import '../presentation/widgets/disease_detection_banner.dart';
+import '../presentation/widgets/todays_farm_actions.dart';
 import '../presentation/widgets/farm_advisory_card.dart';
-import '../presentation/widgets/government_schemes_card.dart';
 import '../presentation/widgets/market_snapshot_card.dart';
 import '../presentation/widgets/quick_actions_grid.dart';
-import '../presentation/widgets/recent_activity_section.dart';
 import '../presentation/widgets/weather_impact_card.dart';
 
-/// Production Farmer Dashboard: The central agronomic decision-support home screen.
-/// Answers the core questions:
-/// 1. "How is my farm today?"
-/// 2. "What should I do today?"
-/// 3. "What should I watch?"
-/// 4. "Where can I get help?"
+/// Clean, Minimal Farmer Dashboard: The central agronomic decision-support home screen.
+/// Focused strictly on today's essential farm information:
+/// 1. Critical personalized alert (FarmAdvisoryCard)
+/// 2. Today's farm actions (TodaysFarmActions)
+/// 3. Weather summary (WeatherImpactCard)
+/// 4. Crop status (CropRecommendationSummaryCard)
+/// 5. Market snapshot (MarketSnapshotCard)
+/// 6. Other information (Quick farm tools)
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -56,7 +55,7 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Personalized Farmer Welcome & Profile Header
+                // 1. Personalized Farmer Header
                 DashboardHeader(
                   user: authState.user,
                   profile: authState.profile,
@@ -72,13 +71,17 @@ class DashboardScreen extends ConsumerWidget {
                         ref.read(dashboardNotifierProvider.notifier).retry(),
                   ),
                 ],
-                AppSpacing.gapV20,
+                AppSpacing.gapV16,
 
-                // 2. Today's Farm Advisory (The Visual Centerpiece)
+                // 1. Critical Personalized Alert Centerpiece
                 FarmAdvisoryCard(advisory: data.advisory),
-                AppSpacing.gapV20,
+                AppSpacing.gapV16,
 
-                // 3 & 4. Weather + Farming Impact & Crop Recommendation Summary
+                // 2. Today's Farm Actions
+                const TodaysFarmActions(),
+                AppSpacing.gapV16,
+
+                // 3 & 4. Weather & Crop Recommendation Summary
                 // Responsive side-by-side on tablet/desktop, stacked on mobile
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -107,32 +110,16 @@ class DashboardScreen extends ConsumerWidget {
                     );
                   },
                 ),
-                AppSpacing.gapV20,
+                AppSpacing.gapV16,
 
-                // 5. Market Snapshot for Farmer's Primary Crop
+                // 5. Market Snapshot for Primary Crop
                 MarketSnapshotCard(market: data.market),
-                AppSpacing.gapV20,
+                AppSpacing.gapV16,
 
-                // 6. Quick Action Navigation Grid
+                // 6. Minimal Quick Farm Tools Grid
                 const _SectionTitle(title: 'Quick Farm Tools'),
                 AppSpacing.gapV10,
                 const QuickActionsGrid(),
-                AppSpacing.gapV20,
-
-                // 7. Plant Disease Detection Spotlight
-                const DiseaseDetectionBanner(),
-                AppSpacing.gapV20,
-
-                // 8. Government Support & Scheme Eligibility Preview
-                GovernmentSchemesCard(schemes: data.schemes),
-                AppSpacing.gapV20,
-
-                // 9. Recent Agricultural Activity Timeline
-                RecentActivitySection(activities: data.recentActivity),
-                AppSpacing.gapV20,
-
-                // 10. AI Agriculture Assistant Direct Access Banner
-                const AssistantEntryCard(),
                 AppSpacing.gapV24,
               ],
             ),
@@ -155,7 +142,7 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.errorLight,
                 shape: BoxShape.circle,
               ),
@@ -209,7 +196,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: FontWeight.w800,
         color: AppColors.textPrimary,
         letterSpacing: -0.2,

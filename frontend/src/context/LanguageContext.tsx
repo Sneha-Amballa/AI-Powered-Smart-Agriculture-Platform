@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LanguageCode, LanguageInfo } from '../types';
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, getLanguageByCode } from '../constants/languages';
 import { api } from '../services/api';
+import {
+  translateText,
+  translateBatch,
+  getCachedTranslation,
+} from '../services/libreTranslateService';
 
 interface LanguageContextType {
   currentLanguage: LanguageCode;
@@ -14,6 +19,10 @@ interface LanguageContextType {
   closeLanguageModal: () => void;
   toastMessage: string | null;
   hideToast: () => void;
+  // LibreTranslate dynamic helpers
+  translateDynamic: (text: string) => Promise<string>;
+  translateBatchDynamic: (texts: string[]) => Promise<string[]>;
+  tDynamic: (text: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -23,7 +32,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [currentLanguage, setCurrentLanguageState] = useState<LanguageCode>(() => {
     const saved = localStorage.getItem('kisan_app_language') as LanguageCode;
-    if (saved && SUPPORTED_LANGUAGES.some((l) => l.code === saved)) {
+    if (saved && (saved === 'en' || saved === 'te' || saved === 'hi')) {
       return saved;
     }
     return DEFAULT_LANGUAGE;
@@ -32,10 +41,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Keep HTML document tag synchronized with active language
+  // Synchronize i18next & document element on initial load and change
   useEffect(() => {
     document.documentElement.lang = currentLanguage;
-  }, [currentLanguage]);
+    if (i18n.language !== currentLanguage) {
+      i18n.changeLanguage(currentLanguage);
+    }
+  }, [currentLanguage, i18n]);
 
   const setLanguage = async (lang: LanguageCode, syncBackendUserId?: number) => {
     if (lang === currentLanguage) {
@@ -46,14 +58,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 1. Update i18next global state
     await i18n.changeLanguage(lang);
 
-    // 2. Update local state & storage
+    // 2. Update local state & localStorage
     setCurrentLanguageState(lang);
     localStorage.setItem('kisan_app_language', lang);
     document.documentElement.lang = lang;
 
-    // 3. Trigger localized confirmation toast
+    // 3. Trigger localized confirmation toast in the newly selected language
     const langObj = getLanguageByCode(lang);
     const updatedMsg = t('common.languageUpdated', {
+      lng: lang,
       defaultValue: 'Language changed to ' + langObj.nativeName + ' (' + langObj.englishName + ')',
     });
     setToastMessage(updatedMsg);
@@ -75,6 +88,37 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsLanguageModalOpen(false);
   };
 
+  /**
+   * Dynamic translation using LibreTranslate API with localStorage cache & English fallback
+   */
+  const translateDynamic = useCallback(
+    async (text: string): Promise<string> => {
+      return translateText(text, currentLanguage);
+    },
+    [currentLanguage]
+  );
+
+  /**
+   * Dynamic batch translation using LibreTranslate API with localStorage cache & English fallback
+   */
+  const translateBatchDynamic = useCallback(
+    async (texts: string[]): Promise<string[]> => {
+      return translateBatch(texts, currentLanguage);
+    },
+    [currentLanguage]
+  );
+
+  /**
+   * Synchronous cached translation check. Returns cached translated text or original English.
+   */
+  const tDynamic = useCallback(
+    (text: string): string => {
+      const cached = getCachedTranslation(text, currentLanguage);
+      return cached || text;
+    },
+    [currentLanguage]
+  );
+
   const openLanguageModal = () => setIsLanguageModalOpen(true);
   const closeLanguageModal = () => setIsLanguageModalOpen(false);
   const hideToast = () => setToastMessage(null);
@@ -93,6 +137,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         closeLanguageModal,
         toastMessage,
         hideToast,
+        translateDynamic,
+        translateBatchDynamic,
+        tDynamic,
       }}
     >
       {children}

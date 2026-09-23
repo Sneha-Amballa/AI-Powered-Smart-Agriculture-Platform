@@ -13,8 +13,6 @@ Future<AppLanguage?> showLanguageSelectorSheet(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final currentLang = ref.read(localeNotifierProvider);
-
   return showModalBottomSheet<AppLanguage>(
     context: context,
     isScrollControlled: true,
@@ -109,7 +107,7 @@ Future<AppLanguage?> showLanguageSelectorSheet(
                       ),
                       shrinkWrap: true,
                       itemCount: AppLanguage.values.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 4),
+                      separatorBuilder: (_, index) => const SizedBox(height: 4),
                       itemBuilder: (itemCtx, index) {
                         final lang = AppLanguage.values[index];
                         final isSelected = lang == activeLang;

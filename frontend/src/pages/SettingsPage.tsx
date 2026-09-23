@@ -1,26 +1,53 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Settings, Globe, Check, Bell, Database, Shield, Smartphone } from 'lucide-react';
+import { Settings, Globe, Check, Bell, Database, Shield, Smartphone, ArrowLeft, LogOut } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { LanguageCode } from '../types';
 
 export const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentLanguage, supportedLanguages, setLanguage } = useLanguage();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLanguageChange = async (code: LanguageCode) => {
     await setLanguage(code, user?.id);
   };
 
+  const handleSignOut = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="settings-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('settings.title')}</h1>
-          <p className="page-subtitle">{t('settings.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('settings.title')}</h1>
+            <p className="page-subtitle">{t('settings.subtitle')}</p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="btn-secondary text-error header-action-btn"
+          title="Sign Out"
+        >
+          <LogOut size={16} />
+          <span>{t('common.logout') || 'Sign Out'}</span>
+        </button>
       </div>
 
       {/* GLOBAL APPLICATION LANGUAGE SETTING */}

@@ -59,7 +59,7 @@ class RecommendationResultCard extends StatelessWidget {
               ),
               AppBadge(
                 label: result.recommendations.isNotEmpty
-                    ? '${result.recommendations.first.confidence.toStringAsFixed(1)}% ML Match'
+                    ? '${result.recommendations.first.confidence.toStringAsFixed(0)}% Match'
                     : 'Optimal',
                 variant: BadgeVariant.success,
               ),

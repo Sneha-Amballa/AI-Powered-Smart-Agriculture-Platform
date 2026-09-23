@@ -111,24 +111,30 @@ export const LandingPage: React.FC = () => {
           {/* CTA Buttons */}
           <div className="hero-cta-group">
             {isAuthenticated ? (
-              <button onClick={() => navigate('/dashboard')} className="btn-primary btn-large">
-                <span>{t('nav.dashboard')}</span>
-                <ArrowRight size={18} />
-              </button>
+              <>
+                <button onClick={() => navigate('/dashboard')} className="btn-primary btn-large">
+                  <span>{t('nav.dashboard')}</span>
+                  <ArrowRight size={18} />
+                </button>
+                <button
+                  onClick={() => navigate('/crop-recommendation')}
+                  className="btn-secondary btn-large"
+                >
+                  <span>{t('cropRecommendation.title')}</span>
+                  <ChevronRight size={18} />
+                </button>
+              </>
             ) : (
-              <button onClick={() => navigate('/register')} className="btn-primary btn-large">
-                <span>{t('auth.registerBtn')}</span>
-                <ArrowRight size={18} />
-              </button>
+              <>
+                <button onClick={() => navigate('/login')} className="btn-primary btn-large">
+                  <span>{t('auth.loginBtn') || 'Sign In'}</span>
+                  <ArrowRight size={18} />
+                </button>
+                <button onClick={() => navigate('/register')} className="btn-secondary btn-large">
+                  <span>{t('auth.registerBtn') || 'Sign Up'}</span>
+                </button>
+              </>
             )}
-
-            <button
-              onClick={() => navigate('/crop-recommendation')}
-              className="btn-secondary btn-large"
-            >
-              <span>{t('cropRecommendation.title')}</span>
-              <ChevronRight size={18} />
-            </button>
           </div>
 
           {/* Value Props Strip */}

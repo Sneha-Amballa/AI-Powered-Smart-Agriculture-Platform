@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   CloudSun,
@@ -10,12 +11,17 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle2,
+  ArrowLeft,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { Translate } from '../services/libreTranslateService';
 
 export const WeatherPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { profile } = useAuth();
+  const { currentLanguage } = useLanguage();
 
   const district = profile?.district || 'Guntur';
   const state = profile?.state || 'Andhra Pradesh';
@@ -33,11 +39,22 @@ export const WeatherPage: React.FC = () => {
   return (
     <div className="weather-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('weather.title')}</h1>
-          <p className="page-subtitle">
-            {district}, {state} • Hyperlocal agro-meteorological guidance
-          </p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('weather.title')}</h1>
+            <p className="page-subtitle">
+              {district}, {state} • Hyperlocal agro-meteorological guidance
+            </p>
+          </div>
         </div>
       </div>
 
@@ -48,7 +65,9 @@ export const WeatherPage: React.FC = () => {
           <div className="cw-temp-row">
             <span className="cw-temp">31°C</span>
             <div className="cw-cond-wrap">
-              <span className="cw-cond">Partly Cloudy</span>
+              <span className="cw-cond">
+                <Translate text="Partly Cloudy" targetLang={currentLanguage} />
+              </span>
               <span className="cw-feels">{t('weather.feelsLike')} 34°C</span>
             </div>
           </div>
@@ -67,7 +86,9 @@ export const WeatherPage: React.FC = () => {
             <Wind size={20} className="stat-icon teal" />
             <div>
               <span className="stat-label">{t('weather.wind')}</span>
-              <span className="stat-val">14 km/h ENE</span>
+              <span className="stat-val">
+                14 km/h <Translate text="ENE" targetLang={currentLanguage} />
+              </span>
             </div>
           </div>
 
@@ -83,7 +104,9 @@ export const WeatherPage: React.FC = () => {
             <Sun size={20} className="stat-icon amber" />
             <div>
               <span className="stat-label">{t('weather.uvIndex')}</span>
-              <span className="stat-val">7 (High)</span>
+              <span className="stat-val">
+                7 (<Translate text="High" targetLang={currentLanguage} />)
+              </span>
             </div>
           </div>
         </div>
@@ -97,9 +120,14 @@ export const WeatherPage: React.FC = () => {
             <h3>{t('weather.irrigationAdv')}</h3>
           </div>
           <p className="adv-text">
-            Soil moisture is currently adequate. No irrigation needed for the next 24 hours. Plan light irrigation on Thursday ahead of forecasted scattered rains.
+            <Translate
+              text="Soil moisture is currently adequate. No irrigation needed for the next 24 hours. Plan light irrigation on Thursday ahead of forecasted scattered rains."
+              targetLang={currentLanguage}
+            />
           </p>
-          <div className="adv-badge safe">Optimal Soil Moisture</div>
+          <div className="adv-badge safe">
+            <Translate text="Optimal Soil Moisture" targetLang={currentLanguage} />
+          </div>
         </div>
 
         <div className="advisory-card">
@@ -108,9 +136,14 @@ export const WeatherPage: React.FC = () => {
             <h3>{t('weather.sprayingAdv')}</h3>
           </div>
           <p className="adv-text">
-            Morning window (07:00 AM - 10:00 AM) is favorable for foliar spray with wind speeds under 10 km/h. Avoid spraying on Thursday afternoon due to rain probability.
+            <Translate
+              text="Morning window (07:00 AM - 10:00 AM) is favorable for foliar spray with wind speeds under 10 km/h. Avoid spraying on Thursday afternoon due to rain probability."
+              targetLang={currentLanguage}
+            />
           </p>
-          <div className="adv-badge warning">Spray Window: 7 AM - 10 AM</div>
+          <div className="adv-badge warning">
+            <Translate text="Spray Window: 7 AM - 10 AM" targetLang={currentLanguage} />
+          </div>
         </div>
       </div>
 
@@ -126,9 +159,13 @@ export const WeatherPage: React.FC = () => {
             const Icon = item.icon;
             return (
               <div key={idx} className="forecast-day-card">
-                <span className="day-name">{item.day}</span>
+                <span className="day-name">
+                  <Translate text={item.day} targetLang={currentLanguage} />
+                </span>
                 <Icon size={28} className="day-icon" />
-                <span className="day-cond">{item.cond}</span>
+                <span className="day-cond">
+                  <Translate text={item.cond} targetLang={currentLanguage} />
+                </span>
                 <div className="day-temp-row">
                   <span className="temp-high">{item.tempMax}°</span>
                   <span className="temp-low">{item.tempMin}°</span>

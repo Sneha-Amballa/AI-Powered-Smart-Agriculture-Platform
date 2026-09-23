@@ -3,7 +3,7 @@ import { LanguageCode } from '../types';
 export interface CropTranslationMap {
   [cropKey: string]: {
     [lang in LanguageCode]?: string;
-  };
+  } & Record<string, string | undefined>;
 }
 
 /**

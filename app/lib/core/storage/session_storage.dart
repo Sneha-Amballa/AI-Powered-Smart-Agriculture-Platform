@@ -122,23 +122,61 @@ class SessionStorage {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final userJson = jsonEncode(user.toJson());
-    await prefs.setString('$_prefixAccount${user.phoneNumber}', userJson);
-    // Store simple hash/credential for offline matching
-    await prefs.setString('$_prefixCredential${user.phoneNumber}', password);
+    if (user.phoneNumber.isNotEmpty) {
+      await prefs.setString('$_prefixAccount${user.phoneNumber}', userJson);
+      await prefs.setString('$_prefixCredential${user.phoneNumber}', password);
+    }
+    if (user.email != null && user.email!.trim().isNotEmpty) {
+      final emailKey = user.email!.trim().toLowerCase();
+      await prefs.setString('$_prefixAccount$emailKey', userJson);
+      await prefs.setString('$_prefixCredential$emailKey', password);
+    }
+    final usernameKey = user.fullName.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+    if (usernameKey.isNotEmpty) {
+      await prefs.setString('$_prefixAccount$usernameKey', userJson);
+      await prefs.setString('$_prefixCredential$usernameKey', password);
+    }
   }
 
   /// Retrieve persistent account record by phone number.
   Future<UserModel?> getAccountByPhone(String phone) async {
+    return getAccountByIdentifier(phone);
+  }
+
+  /// Retrieve persistent account record by phone number, email, or username.
+  Future<UserModel?> getAccountByIdentifier(String identifier) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString('$_prefixAccount$phone');
+    final cleanId = identifier.trim();
+    final lowerId = cleanId.toLowerCase();
+
+    // 1. Direct lookup by key or lowercase
+    var raw = prefs.getString('$_prefixAccount$cleanId') ??
+        prefs.getString('$_prefixAccount$lowerId');
+
+    // 2. Mobile number normalization lookup
     if (raw == null || raw.isEmpty) {
-      // Check legacy/active user if phone matches
+      var cleaned = cleanId.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+      if (cleaned.startsWith('+91')) cleaned = cleaned.substring(3);
+      if (cleaned.startsWith('0') && cleaned.length == 11) cleaned = cleaned.substring(1);
+      if (cleaned.isNotEmpty) {
+        raw = prefs.getString('$_prefixAccount$cleaned');
+      }
+    }
+
+    // 3. Fallback: check currently active user if properties match
+    if (raw == null || raw.isEmpty) {
       final current = await getUser();
-      if (current != null && current.phoneNumber == phone) {
-        return current;
+      if (current != null) {
+        final currentUsername = current.fullName.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '_');
+        if (current.phoneNumber == cleanId ||
+            current.email?.toLowerCase() == lowerId ||
+            currentUsername == lowerId) {
+          return current;
+        }
       }
       return null;
     }
+
     try {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
       return UserModel.fromJson(decoded);
@@ -148,12 +186,25 @@ class SessionStorage {
   }
 
   /// Verify entered password against persistent account credential.
-  Future<bool> verifyPassword(String phone, String password) async {
+  Future<bool> verifyPassword(String identifier, String password) async {
     final prefs = await SharedPreferences.getInstance();
-    final savedPwd = prefs.getString('$_prefixCredential$phone');
+    final cleanId = identifier.trim();
+    final lowerId = cleanId.toLowerCase();
+
+    var savedPwd = prefs.getString('$_prefixCredential$cleanId') ??
+        prefs.getString('$_prefixCredential$lowerId');
+
     if (savedPwd == null || savedPwd.isEmpty) {
-      // If no offline password recorded (e.g. demo mock account), accept password
-      return true;
+      var cleaned = cleanId.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+      if (cleaned.startsWith('+91')) cleaned = cleaned.substring(3);
+      if (cleaned.startsWith('0') && cleaned.length == 11) cleaned = cleaned.substring(1);
+      if (cleaned.isNotEmpty) {
+        savedPwd = prefs.getString('$_prefixCredential$cleaned');
+      }
+    }
+
+    if (savedPwd == null || savedPwd.isEmpty) {
+      return false;
     }
     return savedPwd == password;
   }

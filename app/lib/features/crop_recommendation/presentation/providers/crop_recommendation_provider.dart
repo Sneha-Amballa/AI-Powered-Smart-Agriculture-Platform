@@ -56,8 +56,10 @@ class CropRecommendationNotifier extends Notifier<CropRecommendationState> {
       isSoilOverridden: false,
     );
 
-    // Fetch dynamic weather in background
+    // Fetch dynamic weather in background automatically
     Future.microtask(() => checkWeather(
+          latitude: profile?.location.latitude,
+          longitude: profile?.location.longitude,
           district: profile?.location.district,
           stateName: profile?.location.state,
         ));
@@ -66,8 +68,12 @@ class CropRecommendationNotifier extends Notifier<CropRecommendationState> {
   }
 
   /// Checks the weather service for real-time agromet conditions.
-  /// Zero-fabrication: reports unavailable if no live weather source is connected.
-  Future<void> checkWeather({String? district, String? stateName}) async {
+  Future<void> checkWeather({
+    double? latitude,
+    double? longitude,
+    String? district,
+    String? stateName,
+  }) async {
     // Preserve manual weather if farmer already entered it in this session
     if (state.isWeatherOverridden && state.hasEnvironmentalData) {
       return;
@@ -76,17 +82,23 @@ class CropRecommendationNotifier extends Notifier<CropRecommendationState> {
     state = state.copyWith(weatherStatus: WeatherLoadStatus.loading);
     try {
       final weather = await _weatherService.fetchCurrentConditions(
+        latitude: latitude,
+        longitude: longitude,
         district: district ?? state.district,
         state: stateName ?? state.state,
       );
 
-      if (weather.isAvailable && weather.isComplete) {
+      if (weather.isAvailable) {
         state = state.copyWith(
           weatherStatus: WeatherLoadStatus.loaded,
           temperature: weather.temperature,
           humidity: weather.humidity,
-          rainfall: weather.rainfall,
-          weatherSource: 'Current weather',
+          rainfall: weather.seasonalRainfall ?? weather.rainfall,
+          rainfallProbability: weather.rainfallProbability,
+          rawPrecipitation: weather.rainfall,
+          weatherLastUpdated: weather.lastUpdated,
+          weatherCondition: weather.weatherCondition,
+          weatherSource: weather.source,
           isWeatherOverridden: false,
         );
       } else {
@@ -102,6 +114,7 @@ class CropRecommendationNotifier extends Notifier<CropRecommendationState> {
       );
     }
   }
+
 
   /// Sets manually provided environmental parameters (Temperature, Humidity, Rainfall).
   void setManualWeather({

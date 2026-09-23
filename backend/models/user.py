@@ -53,6 +53,8 @@ class FarmerProfile(Base):
     district = Column(String, nullable=False)
     village = Column(String, nullable=False)
     pincode = Column(String, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
     # Demographics
     farming_experience_years = Column(Integer, nullable=True)

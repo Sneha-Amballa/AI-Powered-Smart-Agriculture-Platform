@@ -20,12 +20,12 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -33,11 +33,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final phone = _phoneController.text.trim();
+    final identifier = _identifierController.text.trim();
     final password = _passwordController.text;
 
     final success = await ref.read(authNotifierProvider.notifier).login(
-          phoneNumber: phone,
+          identifier: identifier,
           password: password,
         );
 
@@ -123,20 +123,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     AppSpacing.gapV16,
                   ],
 
-                  // Mobile Number
+                  // Email or Username
                   AppTextField(
-                    label: 'Registered Mobile Number',
-                    hintText: '10-digit number (e.g. 9876543210)',
-                    prefixIcon: Icons.phone_outlined,
-                    keyboardType: TextInputType.phone,
-                    controller: _phoneController,
+                    label: 'Email or Username',
+                    hintText: 'Enter your email, username, or mobile',
+                    prefixIcon: Icons.person_outline,
+                    keyboardType: TextInputType.emailAddress,
+                    controller: _identifierController,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Mobile number is required';
-                      var cleaned = v.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-                      if (cleaned.startsWith('+91')) cleaned = cleaned.substring(3);
-                      if (cleaned.startsWith('0') && cleaned.length == 11) cleaned = cleaned.substring(1);
-                      if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
-                        return 'Enter a valid 10-digit Indian mobile number';
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Email or username is required';
                       }
                       return null;
                     },
@@ -152,6 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _passwordController,
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Password is required';
+                      if (v.length < 4) return 'Password must be at least 4 characters';
                       return null;
                     },
                   ),
@@ -196,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         AppSpacing.gapH8,
                         Expanded(
                           child: Text(
-                            'Demo account: 9876543210 (any password)',
+                            'Demo credentials: farmer@kisan.ai or 9876543210 (Password: kisan123)',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppColors.primaryDark,

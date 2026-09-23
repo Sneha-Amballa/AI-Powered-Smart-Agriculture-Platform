@@ -8,6 +8,7 @@ from backend.routes.market import router as market_router
 from backend.routes.schemes import router as schemes_router
 from backend.routes.chatbot import router as chatbot_router
 from backend.routes.voice import router as voice_router
+from backend.routes.translation import router as translation_router
 
 api_router = APIRouter()
 
@@ -21,3 +22,5 @@ api_router.include_router(market_router)
 api_router.include_router(schemes_router)
 api_router.include_router(chatbot_router)
 api_router.include_router(voice_router)
+api_router.include_router(translation_router)
+

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { History, Brain, Calendar, Layers, ArrowRight, Trash2, Filter } from 'lucide-react';
+import { History, Brain, Calendar, Layers, ArrowRight, Trash2, Filter, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { getCropDisplayName } from '../constants/crops';
 import { CropRecommendationResult } from '../types';
@@ -124,9 +124,20 @@ export const CropHistoryPage: React.FC = () => {
   return (
     <div className="crop-history-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('cropHistory.title')}</h1>
-          <p className="page-subtitle">{t('cropHistory.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('cropHistory.title')}</h1>
+            <p className="page-subtitle">{t('cropHistory.subtitle')}</p>
+          </div>
         </div>
         <div className="header-btn-row">
           {historyList.length > 0 && (

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_radius.dart';
@@ -11,54 +12,115 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_divider.dart';
 import '../../../shared/widgets/app_logo.dart';
 import '../../../shared/widgets/app_outlined_button.dart';
+import '../../authentication/presentation/providers/auth_provider.dart';
 
 /// Public-facing mobile-first landing page for the AI-Powered Smart Agriculture Platform.
 /// Designed for maximum farmer accessibility, high legibility, and zero overflow.
-class LandingScreen extends StatelessWidget {
+class LandingScreen extends ConsumerWidget {
   const LandingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const AppLogo(size: 28),
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        scrolledUnderElevation: 1,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authNotifierProvider);
+    final isAuthenticated = authState.isAuthenticated;
+
+    return PopScope(
+      canPop: !isAuthenticated,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (isAuthenticated) {
+          context.go('/dashboard');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const AppLogo(size: 24),
+          titleSpacing: 8,
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          scrolledUnderElevation: 1,
+          leading: isAuthenticated
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                  tooltip: 'Back to Dashboard',
+                  onPressed: () => context.go('/dashboard'),
+                )
+              : null,
         actions: [
-          TextButton(
-            onPressed: () => context.push('/login'),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(60, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+          if (isAuthenticated) ...[
+            TextButton.icon(
+              icon: const Icon(Icons.logout, size: 15, color: AppColors.error),
+              label: const Text(
+                'Sign Out',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  color: AppColors.error,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: const Size(64, 36),
+              ),
+              onPressed: () async {
+                await ref.read(authNotifierProvider.notifier).logout();
+                if (context.mounted) {
+                  context.go('/login');
+                }
+              },
             ),
-            child: const Text(
-              'Sign In',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                color: AppColors.primary,
+            AppSpacing.gapH4,
+            ElevatedButton(
+              onPressed: () => context.go('/dashboard'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: const Size(72, 36),
+                shape: AppRadius.shapeMd,
+              ),
+              child: const Text(
+                'Dashboard',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),
-          ),
-          AppSpacing.gapH8,
-          ElevatedButton(
-            onPressed: () => context.push('/register'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              minimumSize: const Size(88, 44),
-              shape: AppRadius.shapeMd,
+            AppSpacing.gapH8,
+          ] else ...[
+            TextButton(
+              onPressed: () => context.push('/login'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(54, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              child: const Text(
+                'Sign In',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
-            child: const Text(
-              'Sign Up',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            AppSpacing.gapH4,
+            ElevatedButton(
+              onPressed: () => context.push('/register'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                minimumSize: const Size(70, 36),
+                shape: AppRadius.shapeMd,
+              ),
+              child: const Text(
+                'Sign Up',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
-          AppSpacing.gapH12,
+            AppSpacing.gapH8,
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -75,8 +137,9 @@ class LandingScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // 1. HERO SECTION (Mobile-First, Zero Truncation, Zero Overflow)
   Widget _buildHeroSection(BuildContext context) {

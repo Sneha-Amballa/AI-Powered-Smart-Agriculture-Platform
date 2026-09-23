@@ -25,17 +25,16 @@ class AuthNotifier extends Notifier<AuthState> {
   void _updateState(AuthState newState) {
     state = newState;
     if (authStateListenable.value != newState) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        authStateListenable.value = newState;
-      });
+      authStateListenable.value = newState;
     }
   }
 
   /// Initialize and restore existing session from local storage.
+  /// Does not authenticate unless valid stored session credentials exist.
   Future<void> initialize() async {
     try {
       final session = await _repository.restoreSession();
-      if (session.user == null) {
+      if (session.user == null || session.token == null || session.token!.isEmpty) {
         _updateState(AuthState.unauthenticated());
         return;
       }
@@ -91,14 +90,16 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Authenticate farmer user with mobile number and password.
+  /// Authenticate farmer user with email/username or mobile number and password.
   Future<bool> login({
-    required String phoneNumber,
+    String? identifier,
+    String? phoneNumber,
     required String password,
   }) async {
     _updateState(state.copyWith(isLoading: true, clearError: true));
     try {
       final result = await _repository.login(
+        identifier: identifier,
         phoneNumber: phoneNumber,
         password: password,
       );

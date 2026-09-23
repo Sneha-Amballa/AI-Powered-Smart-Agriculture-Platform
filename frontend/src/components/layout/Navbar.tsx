@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Sprout,
@@ -16,6 +16,9 @@ import {
   Landmark,
   Bot,
   Settings,
+  LogOut,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
@@ -23,11 +26,12 @@ import { useAuth } from '../../context/AuthContext';
 export const Navbar: React.FC = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const { languageInfo, openLanguageModal } = useLanguage();
-  const { user } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navLinks = [
+  const authNavLinks = [
     { to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/crop-recommendation', label: t('nav.cropRecommendation'), icon: Brain },
     { to: '/crop-history', label: t('nav.cropHistory'), icon: History },
@@ -40,10 +44,16 @@ export const Navbar: React.FC = () => {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
+  const handleSignOut = () => {
+    closeMenu();
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <header className="navbar-header">
       <div className="navbar-container">
-        {/* Brand Logo */}
+        {/* Brand Logo - Navigates to Landing Page without logging user out */}
         <Link to="/" className="navbar-brand" onClick={closeMenu}>
           <div className="brand-logo-icon">
             <Sprout size={24} />
@@ -54,25 +64,27 @@ export const Navbar: React.FC = () => {
           </div>
         </Link>
 
-        {/* Desktop Nav Links */}
-        <nav className="navbar-links desktop-only">
-          {navLinks.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`nav-link ${isActive ? 'active' : ''}`}
-              >
-                <Icon size={16} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Desktop Nav Links (Visible when authenticated) */}
+        {isAuthenticated && (
+          <nav className="navbar-links desktop-only">
+            {authNavLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`nav-link ${isActive ? 'active' : ''}`}
+                >
+                  <Icon size={16} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
-        {/* Actions (Language Pill + Profile) */}
+        {/* Actions (Language Pill + Profile/Sign In/Sign Out) */}
         <div className="navbar-actions">
           {/* Global Language Selector Button */}
           <button
@@ -85,15 +97,41 @@ export const Navbar: React.FC = () => {
             <span className="language-badge-code">({languageInfo.badge})</span>
           </button>
 
-          {/* Profile / Settings link */}
-          <Link to="/profile" className="profile-btn desktop-only" title={t('nav.profile')}>
-            <UserIcon size={18} />
-            <span className="profile-name">{user?.full_name?.split(' ')[0] || 'Farmer'}</span>
-          </Link>
+          {isAuthenticated ? (
+            <>
+              {/* Profile / Settings link */}
+              <Link to="/profile" className="profile-btn desktop-only" title={t('nav.profile')}>
+                <UserIcon size={18} />
+                <span className="profile-name">{user?.full_name?.split(' ')[0] || 'Farmer'}</span>
+              </Link>
 
-          <Link to="/settings" className="settings-icon-btn desktop-only" title={t('nav.settings')}>
-            <Settings size={18} />
-          </Link>
+              <Link to="/settings" className="settings-icon-btn desktop-only" title={t('nav.settings')}>
+                <Settings size={18} />
+              </Link>
+
+              {/* Explicit Sign Out Button */}
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="btn-signout desktop-only"
+                title={t('common.logout') || 'Sign Out'}
+              >
+                <LogOut size={16} />
+                <span>{t('common.logout') || 'Sign Out'}</span>
+              </button>
+            </>
+          ) : (
+            <div className="auth-action-buttons desktop-only">
+              <Link to="/login" className="btn-secondary btn-sm nav-login-btn">
+                <LogIn size={15} />
+                <span>{t('auth.loginBtn') || 'Sign In'}</span>
+              </Link>
+              <Link to="/register" className="btn-primary btn-sm nav-register-btn">
+                <UserPlus size={15} />
+                <span>{t('nav.register') || 'Register'}</span>
+              </Link>
+            </div>
+          )}
 
           {/* Mobile Menu Toggle */}
           <button
@@ -122,29 +160,58 @@ export const Navbar: React.FC = () => {
             </button>
 
             <div className="mobile-nav-list">
-              {navLinks.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.to;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    onClick={closeMenu}
-                    className={`mobile-nav-item ${isActive ? 'active' : ''}`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.label}</span>
+              {/* Public landing link */}
+              <Link to="/" onClick={closeMenu} className={`mobile-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+                <Sprout size={20} />
+                <span>Public Landing Page</span>
+              </Link>
+
+              {isAuthenticated ? (
+                <>
+                  {authNavLinks.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.to;
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={closeMenu}
+                        className={`mobile-nav-item ${isActive ? 'active' : ''}`}
+                      >
+                        <Icon size={20} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                  <Link to="/profile" onClick={closeMenu} className={`mobile-nav-item ${location.pathname === '/profile' ? 'active' : ''}`}>
+                    <UserIcon size={20} />
+                    <span>{t('nav.profile')}</span>
                   </Link>
-                );
-              })}
-              <Link to="/profile" onClick={closeMenu} className="mobile-nav-item">
-                <UserIcon size={20} />
-                <span>{t('nav.profile')}</span>
-              </Link>
-              <Link to="/settings" onClick={closeMenu} className="mobile-nav-item">
-                <Settings size={20} />
-                <span>{t('nav.settings')}</span>
-              </Link>
+                  <Link to="/settings" onClick={closeMenu} className={`mobile-nav-item ${location.pathname === '/settings' ? 'active' : ''}`}>
+                    <Settings size={20} />
+                    <span>{t('nav.settings')}</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="mobile-nav-item mobile-signout-btn"
+                  >
+                    <LogOut size={20} />
+                    <span>{t('common.logout') || 'Sign Out'}</span>
+                  </button>
+                </>
+              ) : (
+                <div className="mobile-auth-links">
+                  <Link to="/login" onClick={closeMenu} className="btn-secondary full-width mb-2">
+                    <LogIn size={18} />
+                    <span>{t('auth.loginBtn') || 'Sign In'}</span>
+                  </Link>
+                  <Link to="/register" onClick={closeMenu} className="btn-primary full-width">
+                    <UserPlus size={18} />
+                    <span>{t('nav.register') || 'Register'}</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

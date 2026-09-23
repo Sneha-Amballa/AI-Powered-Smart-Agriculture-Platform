@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bot, Send, Mic, MicOff, Sparkles, User, HelpCircle, Volume2 } from 'lucide-react';
+import { Bot, Send, Mic, MicOff, Sparkles, User, HelpCircle, Volume2, ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { ChatMessage } from '../types';
 
 export const AIAssistantPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentLanguage, languageInfo } = useLanguage();
   const { user, profile } = useAuth();
 
@@ -105,15 +107,26 @@ export const AIAssistantPage: React.FC = () => {
   return (
     <div className="assistant-page">
       <div className="assistant-header-strip">
-        <div className="assistant-title-group">
-          <div className="assistant-avatar">
-            <Bot size={24} />
-          </div>
-          <div>
-            <h1 className="assistant-title">{t('assistant.title')}</h1>
-            <p className="assistant-subtitle">
-              Responding in <strong>{languageInfo.nativeName} ({languageInfo.englishName})</strong>
-            </p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div className="assistant-title-group">
+            <div className="assistant-avatar">
+              <Bot size={24} />
+            </div>
+            <div>
+              <h1 className="assistant-title">{t('assistant.title')}</h1>
+              <p className="assistant-subtitle">
+                Responding in <strong>{languageInfo.nativeName} ({languageInfo.englishName})</strong>
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -90,7 +90,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
         icon: Icons.eco_rounded,
         accentColor: AppColors.primary,
         route: '/crop-recommendation',
-        badgeLabel: latestRec != null ? 'LIVE ML' : 'READY',
+        badgeLabel: latestRec != null ? 'OPTIMAL' : 'READY',
       ),
       const RecentActivityItem(
         id: 'act_2',

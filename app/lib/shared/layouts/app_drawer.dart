@@ -120,13 +120,15 @@ class AppDrawer extends ConsumerWidget {
                     title: ref.tr('nav_crop_recommendation'),
                     icon: Icons.eco_outlined,
                     path: '/crop-recommendation',
-                    isLive: true,
+                    badgeLabel: 'ACTIVE',
+                    isBadgeActive: true,
                   ),
                   _buildNavItem(
                     context: context,
                     title: ref.tr('nav_disease_detection'),
-                    icon: Icons.biotech_outlined,
+                    icon: Icons.health_and_safety_outlined,
                     path: '/disease-detection',
+                    badgeLabel: 'IN PROGRESS',
                   ),
 
                   _buildSectionHeader('INSIGHTS'),
@@ -135,18 +137,21 @@ class AppDrawer extends ConsumerWidget {
                     title: ref.tr('nav_weather'),
                     icon: Icons.cloud_outlined,
                     path: '/weather',
+                    badgeLabel: 'IN PROGRESS',
                   ),
                   _buildNavItem(
                     context: context,
                     title: ref.tr('nav_market'),
-                    icon: Icons.trending_up_outlined,
+                    icon: Icons.storefront_outlined,
                     path: '/market',
+                    badgeLabel: 'IN PROGRESS',
                   ),
                   _buildNavItem(
                     context: context,
                     title: ref.tr('nav_price_prediction'),
-                    icon: Icons.timeline_outlined,
+                    icon: Icons.trending_up_outlined,
                     path: '/price-prediction',
+                    badgeLabel: 'IN PROGRESS',
                   ),
 
                   _buildSectionHeader('SUPPORT'),
@@ -155,12 +160,14 @@ class AppDrawer extends ConsumerWidget {
                     title: ref.tr('nav_schemes'),
                     icon: Icons.account_balance_outlined,
                     path: '/government-schemes',
+                    badgeLabel: 'IN PROGRESS',
                   ),
                   _buildNavItem(
                     context: context,
                     title: ref.tr('nav_assistant'),
                     icon: Icons.forum_outlined,
                     path: '/assistant',
+                    badgeLabel: 'IN PROGRESS',
                   ),
 
                   _buildSectionHeader('ACCOUNT'),
@@ -208,7 +215,6 @@ class AppDrawer extends ConsumerWidget {
               minVerticalPadding: 12,
               minLeadingWidth: 28,
               onTap: () {
-                Navigator.of(context).pop();
                 _showLogoutDialog(context, ref);
               },
             ),
@@ -242,7 +248,8 @@ class AppDrawer extends ConsumerWidget {
     required String title,
     required IconData icon,
     required String path,
-    bool isLive = false,
+    String? badgeLabel,
+    bool isBadgeActive = false,
   }) {
     final isSelected = currentPath == path;
 
@@ -269,20 +276,27 @@ class AppDrawer extends ConsumerWidget {
             color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
           ),
         ),
-        trailing: isLive
+        trailing: badgeLabel != null
             ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.successLight,
+                  color: isBadgeActive
+                      ? AppColors.successLight
+                      : AppColors.background,
                   borderRadius: AppRadius.radiusPill,
-                  border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: isBadgeActive
+                        ? AppColors.success.withValues(alpha: 0.3)
+                        : AppColors.cardBorder,
+                  ),
                 ),
-                child: const Text(
-                  'LIVE',
+                child: Text(
+                  badgeLabel,
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.success,
+                    letterSpacing: 0.3,
+                    color: isBadgeActive ? AppColors.success : AppColors.textTertiary,
                   ),
                 ),
               )

@@ -58,9 +58,15 @@ class MockWeatherConditionService extends WeatherConditionService {
   });
 
   @override
-  Future<WeatherConditionData> fetchCurrentConditions({String? district, String? state}) async {
+  Future<WeatherConditionData> fetchCurrentConditions({
+    double? latitude,
+    double? longitude,
+    String? district,
+    String? state,
+  }) async {
     return dataToReturn;
   }
+
 }
 
 void main() {

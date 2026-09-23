@@ -54,6 +54,10 @@ class CropRecommendationState {
   final double? temperature;
   final double? humidity;
   final double? rainfall;
+  final double? rainfallProbability;
+  final double? rawPrecipitation;
+  final DateTime? weatherLastUpdated;
+  final String? weatherCondition;
   final String weatherSource; // "Current weather", "Manually entered", "Unavailable"
   final bool isWeatherOverridden;
 
@@ -87,11 +91,16 @@ class CropRecommendationState {
     this.temperature,
     this.humidity,
     this.rainfall,
+    this.rainfallProbability,
+    this.rawPrecipitation,
+    this.weatherLastUpdated,
+    this.weatherCondition,
     this.weatherSource = 'Unavailable',
     this.isWeatherOverridden = false,
     this.result,
     this.errorMessage,
   });
+
 
   /// True when all 7 required ML agronomic parameters are populated.
   bool get isReadyForRecommendation =>
@@ -156,6 +165,10 @@ class CropRecommendationState {
     double? temperature,
     double? humidity,
     double? rainfall,
+    double? rainfallProbability,
+    double? rawPrecipitation,
+    DateTime? weatherLastUpdated,
+    String? weatherCondition,
     String? weatherSource,
     bool? isWeatherOverridden,
     CropRecommendationResult? result,
@@ -189,10 +202,15 @@ class CropRecommendationState {
       temperature: temperature ?? this.temperature,
       humidity: humidity ?? this.humidity,
       rainfall: rainfall ?? this.rainfall,
+      rainfallProbability: rainfallProbability ?? this.rainfallProbability,
+      rawPrecipitation: rawPrecipitation ?? this.rawPrecipitation,
+      weatherLastUpdated: weatherLastUpdated ?? this.weatherLastUpdated,
+      weatherCondition: weatherCondition ?? this.weatherCondition,
       weatherSource: weatherSource ?? this.weatherSource,
       isWeatherOverridden: isWeatherOverridden ?? this.isWeatherOverridden,
       result: clearResult ? null : (result ?? this.result),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
+
   }
 }

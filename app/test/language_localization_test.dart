@@ -1,13 +1,9 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_agriculture_app/app/app.dart';
 import 'package:smart_agriculture_app/app/router.dart';
-import 'package:smart_agriculture_app/core/localization/app_language.dart';
-import 'package:smart_agriculture_app/core/localization/app_translations.dart';
-import 'package:smart_agriculture_app/core/localization/locale_provider.dart';
 import 'package:smart_agriculture_app/core/storage/session_storage.dart';
 import 'package:smart_agriculture_app/features/authentication/domain/models/farmer_profile_model.dart';
 import 'package:smart_agriculture_app/features/authentication/domain/models/user_model.dart';

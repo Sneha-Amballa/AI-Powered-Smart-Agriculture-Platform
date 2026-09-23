@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Landmark, Search, ExternalLink, ShieldCheck, CheckCircle2, FileText, ChevronRight } from 'lucide-react';
+import { Landmark, Search, ExternalLink, ShieldCheck, CheckCircle2, FileText, ChevronRight, ArrowLeft } from 'lucide-react';
 import { GovtScheme } from '../types';
 
 export const SchemesPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
@@ -110,9 +112,20 @@ export const SchemesPage: React.FC = () => {
   return (
     <div className="schemes-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('schemes.title')}</h1>
-          <p className="page-subtitle">{t('schemes.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('schemes.title')}</h1>
+            <p className="page-subtitle">{t('schemes.subtitle')}</p>
+          </div>
         </div>
 
         <div className="market-search-box">

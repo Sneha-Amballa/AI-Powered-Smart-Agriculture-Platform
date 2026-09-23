@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, MapPin, Layers, Globe, Check, Edit2, Save, CheckCircle2, RotateCcw } from 'lucide-react';
+import { User, MapPin, Layers, Globe, Check, Edit2, Save, CheckCircle2, RotateCcw, ArrowLeft, LogOut } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { LanguageCode } from '../types';
 
 export const ProfilePage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentLanguage, supportedLanguages, setLanguage } = useLanguage();
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, logout } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
@@ -57,23 +59,50 @@ export const ProfilePage: React.FC = () => {
     setTimeout(() => setSaveSuccess(''), 4000);
   };
 
+  const handleSignOut = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="profile-page">
       <div className="page-header-strip">
-        <div>
-          <h1 className="page-title">{t('profile.title')}</h1>
-          <p className="page-subtitle">{t('profile.subtitle')}</p>
+        <div className="header-title-with-back">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="btn-back-dashboard"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft size={18} />
+            <span>{t('common.back') || 'Back to Dashboard'}</span>
+          </button>
+          <div>
+            <h1 className="page-title">{t('profile.title')}</h1>
+            <p className="page-subtitle">{t('profile.subtitle')}</p>
+          </div>
         </div>
-        {!isEditing ? (
-          <button onClick={() => setIsEditing(true)} className="btn-primary">
-            <Edit2 size={16} />
-            <span>{t('profile.editProfile')}</span>
+        <div className="header-actions-row">
+          {!isEditing ? (
+            <button onClick={() => setIsEditing(true)} className="btn-primary">
+              <Edit2 size={16} />
+              <span>{t('profile.editProfile')}</span>
+            </button>
+          ) : (
+            <button onClick={() => setIsEditing(false)} className="btn-secondary">
+              <span>{t('profile.cancelEdit')}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="btn-secondary text-error"
+            title="Sign Out"
+          >
+            <LogOut size={16} />
+            <span>{t('common.logout') || 'Sign Out'}</span>
           </button>
-        ) : (
-          <button onClick={() => setIsEditing(false)} className="btn-secondary">
-            <span>{t('profile.cancelEdit')}</span>
-          </button>
-        )}
+        </div>
       </div>
 
       {saveSuccess && (
@@ -111,6 +140,9 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 <span className="native-text">{lang.nativeName}</span>
                 <span className="english-text">{lang.englishName}</span>
+                <span style={{ fontSize: '0.8rem', color: isSelected ? 'var(--color-primary-dark, #2e7d32)' : 'var(--text-secondary)', marginTop: '4px', fontWeight: 600 }}>
+                  {lang.greeting}!
+                </span>
               </button>
             );
           })}
